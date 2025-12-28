@@ -8,6 +8,8 @@
  * - PSF: Settings/metadata files (PARAM.SFO)
  * - PBP: Package format (EBOOT.PBP)
  * - ZLIB: Compression utilities
+ * - VAG: PSP ADPCM audio
+ * - RIFF: WAV audio files
  */
 
 export * from './stream';
@@ -21,3 +23,4 @@ export * from './zlib';
 export * from './prxDecrypt';
 export * from './prxKeys';
 export * from './vag';
+export * from './riff';
