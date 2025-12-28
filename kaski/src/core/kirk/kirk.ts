@@ -10,6 +10,7 @@
 
 import { aesDecryptCbc } from './aes';
 import { KIRK1_KEY, getKirk7Key } from './keys';
+import { sha1 } from './sha1';
 
 /**
  * KIRK operation modes
@@ -140,6 +141,22 @@ export interface KirkAes128CmacHeader
 
 const AES128_CBC_HEADER_SIZE = 20;  // 5 * 4 bytes
 const AES128_CMAC_HEADER_SIZE = 144; // 0x90 bytes
+const SHA1_HEADER_SIZE = 4; // Just the data_size field
+const SHA1_DIGEST_SIZE = 20; // 160 bits = 20 bytes
+
+/**
+ * PRNG state - initialized with random data
+ */
+let prngData = new Uint8Array(SHA1_DIGEST_SIZE);
+let kirkInitialized = false;
+
+/**
+ * PRNG fixed key material for additional randomization
+ */
+const PRNG_KEY = new Uint8Array([
+  0xA7, 0x2E, 0x4C, 0xB6, 0xC3, 0x34, 0xDF, 0x85,
+  0x70, 0x01, 0x49, 0xFC, 0xC0, 0x87, 0xC4, 0x77
+]);
 
 /**
  * Parse KIRK AES128 CBC header from data
@@ -265,6 +282,157 @@ export function kirkCmd1(input: Uint8Array): Uint8Array
 }
 
 /**
+ * KIRK CMD11: SHA1 hash generation
+ *
+ * Computes SHA1 hash of input data.
+ *
+ * Input format:
+ *   [0-3] data_size (uint32 LE)
+ *   [4..] data to hash
+ *
+ * Output: 20-byte SHA1 digest
+ */
+export function kirkCmd11(input: Uint8Array): Uint8Array
+{
+  if (input.length < SHA1_HEADER_SIZE)
+  {
+    throw new Error(`KIRK CMD11: Input too small (${input.length} < ${SHA1_HEADER_SIZE})`);
+  }
+
+  const view = new DataView(input.buffer, input.byteOffset, input.byteLength);
+  const dataSize = view.getUint32(0, true);
+
+  if (dataSize === 0)
+  {
+    throw new Error('KIRK CMD11: Data size is zero');
+  }
+
+  if (input.length < SHA1_HEADER_SIZE + dataSize)
+  {
+    throw new Error(`KIRK CMD11: Input buffer too small for data (need ${SHA1_HEADER_SIZE + dataSize}, got ${input.length})`);
+  }
+
+  const data = input.slice(SHA1_HEADER_SIZE, SHA1_HEADER_SIZE + dataSize);
+  return sha1(data);
+}
+
+/**
+ * KIRK CMD14: Pseudo-Random Number Generator
+ *
+ * Generates pseudo-random data using SHA1-based PRNG.
+ * Uses internal state + timestamp + fixed key for entropy.
+ *
+ * @param size - Number of random bytes to generate
+ * @returns Random bytes
+ */
+export function kirkCmd14(size: number): Uint8Array
+{
+  if (size <= 0)
+  {
+    return new Uint8Array(0);
+  }
+
+  const result = new Uint8Array(size);
+  let offset = 0;
+
+  while (offset < size)
+  {
+    // Update PRNG state
+    updatePrngState();
+
+    // Copy as many bytes as needed from current state
+    const toCopy = Math.min(SHA1_DIGEST_SIZE, size - offset);
+    result.set(prngData.subarray(0, toCopy), offset);
+    offset += toCopy;
+  }
+
+  return result;
+}
+
+/**
+ * Update PRNG internal state
+ *
+ * Mixes current state with timestamp and key, then hashes to get new state.
+ */
+function updatePrngState(): void
+{
+  // Build input buffer:
+  // [0-3]   data_size for SHA1
+  // [4-23]  current PRNG state (20 bytes)
+  // [24-27] timestamp (4 bytes)
+  // [28-43] fixed PRNG key (16 bytes)
+  const buffer = new Uint8Array(4 + 20 + 4 + 16);
+  const view = new DataView(buffer.buffer);
+
+  // Data size (everything after the 4-byte header)
+  view.setUint32(0, 40, true); // 20 + 4 + 16 = 40
+
+  // Current state
+  buffer.set(prngData, 4);
+
+  // Timestamp - use performance.now or Date.now for randomness
+  const timestamp = Date.now() & 0xFFFFFFFF;
+  view.setUint32(24, timestamp, true);
+
+  // Fixed key
+  buffer.set(PRNG_KEY, 28);
+
+  // Hash to get new state
+  prngData = kirkCmd11(buffer);
+}
+
+/**
+ * Initialize KIRK engine
+ *
+ * @param seed - Optional seed data for PRNG initialization
+ */
+export function kirkInit(seed?: Uint8Array): void
+{
+  if (seed && seed.length > 0)
+  {
+    // Hash seed to initialize PRNG state
+    const buffer = new Uint8Array(4 + seed.length);
+    const view = new DataView(buffer.buffer);
+    view.setUint32(0, seed.length, true);
+    buffer.set(seed, 4);
+
+    prngData = kirkCmd11(buffer);
+  }
+  else
+  {
+    // Initialize with timestamp-based randomness
+    const buffer = new Uint8Array(4 + 8);
+    const view = new DataView(buffer.buffer);
+    view.setUint32(0, 8, true);
+
+    const now = Date.now();
+    view.setUint32(4, now & 0xFFFFFFFF, true);
+    view.setUint32(8, (now / 0x100000000) | 0, true);
+
+    prngData = kirkCmd11(buffer);
+  }
+
+  kirkInitialized = true;
+}
+
+/**
+ * Check if KIRK is initialized
+ */
+export function isKirkInitialized(): boolean
+{
+  return kirkInitialized;
+}
+
+/**
+ * Reset KIRK state (for testing)
+ */
+export function kirkReset(): void
+{
+  prngData = new Uint8Array(SHA1_DIGEST_SIZE);
+  kirkInitialized = false;
+}
+
+/**
  * Execute KIRK command
  *
  * @param output - Output buffer
@@ -292,6 +460,24 @@ export function kirkExecute(
         result = kirkCmd7(input);
         break;
 
+      case KirkCommand.SHA1_HASH:
+        result = kirkCmd11(input);
+        break;
+
+      case KirkCommand.PRNG:
+        {
+          // Input contains desired size
+          const view = new DataView(input.buffer, input.byteOffset, input.byteLength);
+          const size = view.getUint32(0, true);
+          result = kirkCmd14(size);
+        }
+        break;
+
+      case KirkCommand.INIT:
+        kirkInit();
+        result = new Uint8Array(0);
+        break;
+
       // TODO: Implement other commands
       case KirkCommand.ENCRYPT_IV_0:
       case KirkCommand.ENCRYPT_IV_FUSE:
@@ -299,10 +485,8 @@ export function kirkExecute(
       case KirkCommand.DECRYPT_IV_FUSE:
       case KirkCommand.DECRYPT_IV_USER:
       case KirkCommand.PRIV_SIG_CHECK:
-      case KirkCommand.SHA1_HASH:
       case KirkCommand.ECDSA_GEN_KEYS:
       case KirkCommand.ECDSA_MULTIPLY_POINT:
-      case KirkCommand.PRNG:
       case KirkCommand.ECDSA_SIGN:
       case KirkCommand.ECDSA_VERIFY:
       case KirkCommand.CERT_VERIFY:

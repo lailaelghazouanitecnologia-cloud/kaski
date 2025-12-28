@@ -10,6 +10,11 @@ export {
   KirkError,
   kirkCmd1,
   kirkCmd7,
+  kirkCmd11,
+  kirkCmd14,
+  kirkInit,
+  kirkReset,
+  isKirkInitialized,
   kirkExecute,
   hleUtilsBufferCopyWithRange,
 } from './kirk';
@@ -28,3 +33,9 @@ export {
   KIRK7_KEYS,
   getKirk7Key,
 } from './keys';
+
+export {
+  sha1,
+  sha1Hex,
+  Sha1Context,
+} from './sha1';

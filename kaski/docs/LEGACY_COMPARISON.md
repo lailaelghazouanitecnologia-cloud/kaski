@@ -63,8 +63,9 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | CMD1 (Decrypt Private) | Yes | Yes | OK |
 | CMD7 (Decrypt IV=0) | Yes | Yes | OK |
 | CMD4 (Encrypt IV=0) | Yes | Stub | TODO |
-| SHA1 Hash | Yes | Stub | TODO |
-| PRNG | Yes | Stub | TODO |
+| CMD11 (SHA1 Hash) | Yes | Yes | OK |
+| CMD14 (PRNG) | Yes | Yes | OK |
+| CMD15 (Init) | Yes | Yes | OK |
 | ECDSA Sign/Verify | Yes | Stub | TODO |
 | Key Management | Inline | keys.ts | Improved |
 
@@ -182,11 +183,11 @@ This document tracks the comparison between the legacy PSP emulator implementati
 1. ~~**CSO Support**~~ - Implemented
 2. ~~**ZLIB**~~ - Implemented
 3. ~~**ISO VFS**~~ - Implemented
-4. **Encrypted PRX Loading** - elf_crypted_prx.ts functionality
+4. ~~**Encrypted PRX Loading**~~ - Implemented (prxDecrypt.ts, prxKeys.ts)
 
 ### Medium Priority
 
-1. **Additional KIRK Commands** - SHA1, PRNG, ECDSA
+1. **Additional KIRK Commands** - ECDSA Sign/Verify (SHA1, PRNG done)
 2. **VAG Audio** - PSP audio format
 3. **RIFF Audio** - Standard audio format
 
@@ -253,3 +254,10 @@ This document tracks the comparison between the legacy PSP emulator implementati
 - ZLIB raw DEFLATE decompression added
 - 16 CSO/ZLIB tests passing
 - Total: 758 tests across 26 files
+- SHA1 hashing algorithm implemented (CMD11)
+- PRNG random number generator implemented (CMD14)
+- KIRK initialization (CMD15) implemented
+- Total: 782 tests across 26 files
+- Encrypted PRX detection and decryption added
+- PRX key database with 144-byte and 16-byte keys
+- Total: 802 tests across 27 files

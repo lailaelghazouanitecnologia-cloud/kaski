@@ -9,12 +9,20 @@ import {
   KirkError,
   kirkCmd1,
   kirkCmd7,
+  kirkCmd11,
+  kirkCmd14,
+  kirkInit,
+  kirkReset,
+  isKirkInitialized,
   kirkExecute,
   hleUtilsBufferCopyWithRange,
   aesDecryptCbc,
   KIRK1_KEY,
   KIRK7_KEYS,
   getKirk7Key,
+  sha1,
+  sha1Hex,
+  Sha1Context,
 } from '../src/core/kirk';
 
 describe('KIRK Crypto Engine', () =>
@@ -345,6 +353,276 @@ describe('KIRK Crypto Engine', () =>
     });
   });
 
+  // ============================================
+  // SHA1 Tests
+  // ============================================
+
+  describe('SHA1', () =>
+  {
+    it('should hash empty string correctly', () =>
+    {
+      const empty = new Uint8Array(0);
+      const hash = sha1(empty);
+
+      // SHA1("") = da39a3ee5e6b4b0d3255bfef95601890afd80709
+      expect(sha1Hex(empty)).toBe('da39a3ee5e6b4b0d3255bfef95601890afd80709');
+    });
+
+    it('should hash "abc" correctly', () =>
+    {
+      const abc = new TextEncoder().encode('abc');
+      const hash = sha1Hex(abc);
+
+      // SHA1("abc") = a9993e364706816aba3e25717850c26c9cd0d89d
+      expect(hash).toBe('a9993e364706816aba3e25717850c26c9cd0d89d');
+    });
+
+    it('should hash longer message correctly', () =>
+    {
+      const msg = new TextEncoder().encode('The quick brown fox jumps over the lazy dog');
+      const hash = sha1Hex(msg);
+
+      // SHA1("The quick brown fox jumps over the lazy dog")
+      expect(hash).toBe('2fd4e1c67a2d28fced849ee1bb76e7391b93eb12');
+    });
+
+    it('should hash exactly 55 bytes (padding edge case)', () =>
+    {
+      // 55 bytes = 440 bits, needs 1 byte for 0x80 + 8 bytes for length = 64 bytes total
+      const data = new Uint8Array(55).fill(0x61); // 'a'
+      const hash = sha1(data);
+      expect(hash.length).toBe(20);
+    });
+
+    it('should hash exactly 56 bytes (padding edge case)', () =>
+    {
+      // 56 bytes needs second block for padding
+      const data = new Uint8Array(56).fill(0x61);
+      const hash = sha1(data);
+      expect(hash.length).toBe(20);
+    });
+
+    it('should hash exactly 64 bytes (one full block)', () =>
+    {
+      const data = new Uint8Array(64).fill(0x61);
+      const hash = sha1(data);
+      expect(hash.length).toBe(20);
+    });
+
+    it('should hash multiple blocks correctly', () =>
+    {
+      // "a" repeated 1000000 times
+      // SHA1 = 34aa973cd4c4daa4f61eeb2bdbad27316534016f
+      const data = new Uint8Array(1000000).fill(0x61);
+      const hash = sha1Hex(data);
+      expect(hash).toBe('34aa973cd4c4daa4f61eeb2bdbad27316534016f');
+    });
+
+    it('should work with Sha1Context for streaming', () =>
+    {
+      const ctx = new Sha1Context();
+      ctx.update(new TextEncoder().encode('The quick brown '));
+      ctx.update(new TextEncoder().encode('fox jumps over '));
+      ctx.update(new TextEncoder().encode('the lazy dog'));
+      const hash = ctx.final();
+
+      const expected = sha1(new TextEncoder().encode('The quick brown fox jumps over the lazy dog'));
+      expect(hash).toEqual(expected);
+    });
+
+    it('should reset context for reuse', () =>
+    {
+      const ctx = new Sha1Context();
+      ctx.update(new TextEncoder().encode('test'));
+      ctx.final();
+      ctx.reset();
+      ctx.update(new TextEncoder().encode('abc'));
+      const hash = ctx.final();
+
+      expect(hash).toEqual(sha1(new TextEncoder().encode('abc')));
+    });
+  });
+
+  // ============================================
+  // KIRK CMD11 (SHA1_HASH) Tests
+  // ============================================
+
+  describe('kirkCmd11', () =>
+  {
+    it('should hash data with KIRK header', () =>
+    {
+      // KIRK CMD11 input: [4 bytes size LE] + [data]
+      const data = new TextEncoder().encode('abc');
+      const input = new Uint8Array(4 + data.length);
+      const view = new DataView(input.buffer);
+      view.setUint32(0, data.length, true);
+      input.set(data, 4);
+
+      const hash = kirkCmd11(input);
+
+      expect(hash.length).toBe(20);
+      expect(sha1Hex(data)).toBe('a9993e364706816aba3e25717850c26c9cd0d89d');
+    });
+
+    it('should reject input too small', () =>
+    {
+      const input = new Uint8Array(2);
+      expect(() => kirkCmd11(input)).toThrow('Input too small');
+    });
+
+    it('should reject zero data size', () =>
+    {
+      const input = new Uint8Array(8);
+      // dataSize = 0
+      expect(() => kirkCmd11(input)).toThrow('Data size is zero');
+    });
+
+    it('should reject buffer too small for data', () =>
+    {
+      const input = new Uint8Array(10);
+      const view = new DataView(input.buffer);
+      view.setUint32(0, 100, true); // Says 100 bytes but only 6 available
+      expect(() => kirkCmd11(input)).toThrow('Input buffer too small');
+    });
+
+    it('should work via kirkExecute', () =>
+    {
+      const data = new TextEncoder().encode('test');
+      const input = new Uint8Array(4 + data.length);
+      const view = new DataView(input.buffer);
+      view.setUint32(0, data.length, true);
+      input.set(data, 4);
+
+      const output = new Uint8Array(20);
+      const result = kirkExecute(output, input, KirkCommand.SHA1_HASH);
+
+      expect(result).toBe(KirkError.OK);
+      expect(output.length).toBe(20);
+    });
+  });
+
+  // ============================================
+  // KIRK CMD14 (PRNG) Tests
+  // ============================================
+
+  describe('kirkCmd14', () =>
+  {
+    beforeEach(() =>
+    {
+      kirkReset();
+    });
+
+    it('should generate random data of requested size', () =>
+    {
+      const data = kirkCmd14(32);
+      expect(data.length).toBe(32);
+    });
+
+    it('should generate different data on each call', () =>
+    {
+      const data1 = kirkCmd14(20);
+      const data2 = kirkCmd14(20);
+
+      // Very unlikely to be the same
+      expect(data1).not.toEqual(data2);
+    });
+
+    it('should handle size 0', () =>
+    {
+      const data = kirkCmd14(0);
+      expect(data.length).toBe(0);
+    });
+
+    it('should handle large sizes', () =>
+    {
+      const data = kirkCmd14(1000);
+      expect(data.length).toBe(1000);
+    });
+
+    it('should generate exactly 20 bytes (one block)', () =>
+    {
+      const data = kirkCmd14(20);
+      expect(data.length).toBe(20);
+    });
+
+    it('should generate 40 bytes (two blocks)', () =>
+    {
+      const data = kirkCmd14(40);
+      expect(data.length).toBe(40);
+    });
+
+    it('should work via kirkExecute', () =>
+    {
+      const input = new Uint8Array(4);
+      const view = new DataView(input.buffer);
+      view.setUint32(0, 32, true); // Request 32 random bytes
+
+      const output = new Uint8Array(32);
+      const result = kirkExecute(output, input, KirkCommand.PRNG);
+
+      expect(result).toBe(KirkError.OK);
+    });
+  });
+
+  // ============================================
+  // KIRK Initialization Tests
+  // ============================================
+
+  describe('kirkInit', () =>
+  {
+    beforeEach(() =>
+    {
+      kirkReset();
+    });
+
+    it('should initialize KIRK', () =>
+    {
+      expect(isKirkInitialized()).toBe(false);
+      kirkInit();
+      expect(isKirkInitialized()).toBe(true);
+    });
+
+    it('should accept seed data', () =>
+    {
+      const seed = new TextEncoder().encode('my seed data');
+      kirkInit(seed);
+      expect(isKirkInitialized()).toBe(true);
+    });
+
+    it('should produce different PRNG output with different seeds', () =>
+    {
+      kirkInit(new TextEncoder().encode('seed1'));
+      const data1 = kirkCmd14(20);
+
+      kirkReset();
+      kirkInit(new TextEncoder().encode('seed2'));
+      const data2 = kirkCmd14(20);
+
+      expect(data1).not.toEqual(data2);
+    });
+
+    it('should reset state', () =>
+    {
+      kirkInit();
+      expect(isKirkInitialized()).toBe(true);
+      kirkReset();
+      expect(isKirkInitialized()).toBe(false);
+    });
+
+    it('should work via kirkExecute with CMD INIT', () =>
+    {
+      kirkReset();
+      expect(isKirkInitialized()).toBe(false);
+
+      const input = new Uint8Array(0);
+      const output = new Uint8Array(0);
+      const result = kirkExecute(output, input, KirkCommand.INIT);
+
+      expect(result).toBe(KirkError.OK);
+      expect(isKirkInitialized()).toBe(true);
+    });
+  });
+
   describe('Unimplemented commands', () =>
   {
     const unimplementedCommands = [
@@ -354,10 +632,8 @@ describe('KIRK Crypto Engine', () =>
       KirkCommand.DECRYPT_IV_FUSE,
       KirkCommand.DECRYPT_IV_USER,
       KirkCommand.PRIV_SIG_CHECK,
-      KirkCommand.SHA1_HASH,
       KirkCommand.ECDSA_GEN_KEYS,
       KirkCommand.ECDSA_MULTIPLY_POINT,
-      KirkCommand.PRNG,
       KirkCommand.ECDSA_SIGN,
       KirkCommand.ECDSA_VERIFY,
       KirkCommand.CERT_VERIFY,
