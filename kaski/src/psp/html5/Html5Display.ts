@@ -104,27 +104,38 @@ export class Html5Display
 
     const fb = this.display.getFrameBuf();
 
-    // Debug: log framebuffer info on first render
-    if (this.frameCount === 0)
+    // Debug: log framebuffer info on first render only (use a static flag)
+    if (!(Html5Display as any)._debugDone)
     {
-      console.log('[Html5Display] First render:', {
-        address: '0x' + fb.address.toString(16),
-        bufferWidth: fb.bufferWidth,
-        pixelFormat: fb.pixelFormat
-      });
+      (Html5Display as any)._debugDone = true;
+      console.log(`[Html5Display] FB: addr=0x${fb.address.toString(16)}, width=${fb.bufferWidth}, format=${fb.pixelFormat}`);
+
+      // Test memory reads BEFORE render
+      const testAddr = fb.address;
+      const raw0 = this.memory.lwu(testAddr);
+      const raw100 = this.memory.lwu(testAddr + (100 * fb.bufferWidth + 100) * 4);
+      const raw200 = this.memory.lwu(testAddr + (200 * fb.bufferWidth + 200) * 4);
+      console.log(`[Html5Display] Raw mem BEFORE render:`);
+      console.log(`  [0,0]: 0x${raw0.toString(16).padStart(8,'0')} -> R=${raw0 & 0xFF}, G=${(raw0>>>8)&0xFF}, B=${(raw0>>>16)&0xFF}, A=${(raw0>>>24)&0xFF}`);
+      console.log(`  [100,100]: 0x${raw100.toString(16).padStart(8,'0')} -> R=${raw100 & 0xFF}, G=${(raw100>>>8)&0xFF}, B=${(raw100>>>16)&0xFF}, A=${(raw100>>>24)&0xFF}`);
+      console.log(`  [200,200]: 0x${raw200.toString(16).padStart(8,'0')} -> R=${raw200 & 0xFF}, G=${(raw200>>>8)&0xFF}, B=${(raw200>>>16)&0xFF}, A=${(raw200>>>24)&0xFF}`);
     }
 
     this.renderFramebuffer(fb.address, fb.bufferWidth, fb.pixelFormat);
 
-    // Debug: check a few pixels on first render
-    if (this.frameCount === 0)
+    // Debug: check imageData after render
+    if ((Html5Display as any)._debugDone && !(Html5Display as any)._debugDone2)
     {
+      (Html5Display as any)._debugDone2 = true;
       const pixels = this.imageData.data;
-      console.log('[Html5Display] Pixel samples:', {
-        'px[0,0]': [pixels[0], pixels[1], pixels[2], pixels[3]],
-        'px[100,100]': [pixels[100*SCREEN_WIDTH*4], pixels[100*SCREEN_WIDTH*4+1], pixels[100*SCREEN_WIDTH*4+2], pixels[100*SCREEN_WIDTH*4+3]],
-        'px[240,136]': [pixels[136*SCREEN_WIDTH*4+240*4], pixels[136*SCREEN_WIDTH*4+240*4+1], pixels[136*SCREEN_WIDTH*4+240*4+2], pixels[136*SCREEN_WIDTH*4+240*4+3]],
-      });
+      // Correct indexing: (y * width + x) * 4
+      const idx0 = 0;  // pixel (0,0)
+      const idx100 = (100 * SCREEN_WIDTH + 100) * 4;  // pixel (100,100)
+      const idx200 = (200 * SCREEN_WIDTH + 200) * 4;  // pixel (200,200)
+      console.log(`[Html5Display] ImageData AFTER render:`);
+      console.log(`  px[0,0]: R=${pixels[idx0]}, G=${pixels[idx0+1]}, B=${pixels[idx0+2]}, A=${pixels[idx0+3]}`);
+      console.log(`  px[100,100]: R=${pixels[idx100]}, G=${pixels[idx100+1]}, B=${pixels[idx100+2]}, A=${pixels[idx100+3]}`);
+      console.log(`  px[200,200]: R=${pixels[idx200]}, G=${pixels[idx200+1]}, B=${pixels[idx200+2]}, A=${pixels[idx200+3]}`);
     }
 
     // Put imageData directly to canvas context
@@ -162,20 +173,6 @@ export class Html5Display
 
     const pixels = this.imageData.data;
     const bytesPerPixel = this.getBytesPerPixel(format);
-
-    // Debug on first frame
-    if (this.frameCount === 0)
-    {
-      // Check raw memory values
-      const raw0 = this.memory.lwu(address);
-      const raw100 = this.memory.lwu(address + (100 * stride + 100) * bytesPerPixel);
-      console.log('[Html5Display] Raw memory:', {
-        'mem[0,0]': '0x' + raw0.toString(16),
-        'mem[100,100]': '0x' + raw100.toString(16),
-        bytesPerPixel,
-        stride
-      });
-    }
 
     for (let y = 0; y < SCREEN_HEIGHT; y++)
     {
