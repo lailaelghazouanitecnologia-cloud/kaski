@@ -568,6 +568,73 @@ export class Interpreter {
       return ExecutionResult.BRANCH;
     });
 
+    this.handlers.set('bgtzl', (cpu, i) => {
+      if (cpu.getGpr(i.rs) > 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('blezl', (cpu, i) => {
+      if (cpu.getGpr(i.rs) <= 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('bgezl', (cpu, i) => {
+      if (cpu.getGpr(i.rs) >= 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('bltzl', (cpu, i) => {
+      if (cpu.getGpr(i.rs) < 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('bgezall', (cpu, i) => {
+      cpu.ra = (cpu.pc + 8) >>> 0;
+      if (cpu.getGpr(i.rs) >= 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('bltzall', (cpu, i) => {
+      cpu.ra = (cpu.pc + 8) >>> 0;
+      if (cpu.getGpr(i.rs) < 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    // FPU likely branches
+    this.handlers.set('bc1fl', (cpu, i) => {
+      if ((cpu.fcr31 & 0x800000) === 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
+    this.handlers.set('bc1tl', (cpu, i) => {
+      if ((cpu.fcr31 & 0x800000) !== 0) {
+        return this.executeBranch(cpu, i.branchTarget);
+      }
+      cpu.pc = (cpu.pc + 8) >>> 0;
+      return ExecutionResult.BRANCH;
+    });
+
     // ============================================
     // Jump Instructions
     // ============================================

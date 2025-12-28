@@ -54,36 +54,30 @@ kaski/src/core/
 
 | Category | Legacy | Kaski | Notes |
 |----------|--------|-------|-------|
-| Arithmetic | ✅ Full | ✅ Full | add, sub, mul, div |
+| Arithmetic | ✅ Full | ✅ Full | add, sub, mul, div, madd, msub |
 | Logical | ✅ Full | ✅ Full | and, or, xor, nor |
 | Shift | ✅ Full | ✅ Full | sll, srl, sra, rot |
-| Branch | ✅ Full | ✅ Basic | Missing: likely variants handled |
+| Branch | ✅ Full | ✅ Full | All variants including likely |
 | Jump | ✅ Full | ✅ Full | j, jal, jr, jalr |
 | Load/Store | ✅ Full | ✅ Full | lb, lh, lw, sb, sh, sw |
 | FPU Basic | ✅ Full | ✅ Full | add.s, mul.s, etc. |
-| **VFPU** | ✅ 101 instr | ❌ None | Vector/Matrix ops |
-| **COP0** | ✅ Full | ❌ None | System registers |
+| **VFPU** | ✅ 101 instr | ✅ ~40 ops | Vector arithmetic, scalar, trig |
+| **COP0** | ✅ Full | ✅ Basic | mfc0, mtc0 |
 | PSP-specific | ✅ Full | ✅ Partial | ext, ins, clz, etc. |
 
 ### Missing from Kaski
 
 #### High Priority
-1. **VFPU Instructions** (101 total)
-   - Vector arithmetic: vadd, vsub, vmul, vdiv
-   - Matrix operations: vmmul, vmidt
-   - Conversions: vfpu↔gpr, vfpu↔fpu
-   - Prefix system: swizzle, negate, saturate
+1. **VFPU Instructions** (~60 remaining)
+   - Matrix operations: vmmul, vmidt, vhtfm
+   - Quaternion ops: vqmul
+   - Conversions: vfpu↔gpr (mtv, mfv)
+   - Prefix system: vpfx instructions
 
 2. **JIT Code Generation**
    - Compile basic blocks to JS functions
    - Cache with invalidation
    - Significant performance improvement
-
-3. **COP0 Registers**
-   - mfc0, mtc0 (system control)
-
-4. **Multiply-Accumulate**
-   - madd, maddu, msub, msubu
 
 #### Medium Priority
 5. **Thread Support**
@@ -113,11 +107,12 @@ kaski/src/core/
 - [x] Basic FPU
 - [x] Tests (225 passing)
 
-### Phase 2: Extended CPU
-- [ ] VFPU instructions
-- [ ] COP0 registers
-- [ ] Complete branch variants
-- [ ] madd/msub instructions
+### Phase 2: Extended CPU ✅
+- [x] VFPU instructions (~40 ops: vadd, vsub, vmul, vdiv, vmin, vmax, vabs, vneg, vsqrt, vsin, vcos, etc.)
+- [x] COP0 registers (mfc0, mtc0)
+- [x] Complete branch variants (likely branches: beql, bnel, bgtzl, blezl, bgezl, bltzl, etc.)
+- [x] madd/msub instructions
+- [x] Tests (251 passing)
 
 ### Phase 3: Performance
 - [ ] Basic JIT (function caching)
@@ -166,10 +161,10 @@ All addresses are masked with `0x0FFFFFFF` for region mapping.
 
 | Metric | Legacy | Kaski |
 |--------|--------|-------|
-| Total Lines | 165K+ | ~2.5K |
-| CPU Core Lines | 1,844 | 476 |
-| Instruction Handlers | 623 | ~100 |
-| Test Coverage | Limited | 225 tests |
+| Total Lines | 165K+ | ~4K |
+| CPU Core Lines | 1,844 | ~1,200 |
+| Instruction Handlers | 623 | ~150 |
+| Test Coverage | Limited | 251 tests |
 | Dependencies | Many | Minimal (Bun) |
 
 ## File Reference

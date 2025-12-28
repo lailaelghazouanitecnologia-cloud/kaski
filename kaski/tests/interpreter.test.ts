@@ -412,6 +412,102 @@ describe('Interpreter', () => {
     });
   });
 
+  describe('Likely Branch Operations', () => {
+    it('should execute BEQL (taken)', () => {
+      cpu.setGpr(8, 10);
+      cpu.setGpr(9, 10);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BEQL $t0, $t1, +2 (opcode 010100)
+      memory.sw(MAIN_MEMORY_BASE, 0x51090002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+      expect(cpu.pc).toBe(MAIN_MEMORY_BASE + 0x0C);
+    });
+
+    it('should execute BEQL (not taken - skip delay slot)', () => {
+      cpu.setGpr(8, 10);
+      cpu.setGpr(9, 20);
+      cpu.pc = MAIN_MEMORY_BASE;
+      memory.sw(MAIN_MEMORY_BASE, 0x51090002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+      // When not taken, likely branches skip delay slot (PC + 8)
+      expect(cpu.pc).toBe(MAIN_MEMORY_BASE + 8);
+    });
+
+    it('should execute BNEL (taken)', () => {
+      cpu.setGpr(8, 10);
+      cpu.setGpr(9, 20);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BNEL $t0, $t1, +2 (opcode 010101)
+      memory.sw(MAIN_MEMORY_BASE, 0x55090002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+    });
+
+    it('should execute BNEL (not taken - skip delay slot)', () => {
+      cpu.setGpr(8, 10);
+      cpu.setGpr(9, 10);
+      cpu.pc = MAIN_MEMORY_BASE;
+      memory.sw(MAIN_MEMORY_BASE, 0x55090002);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+      expect(cpu.pc).toBe(MAIN_MEMORY_BASE + 8);
+    });
+
+    it('should execute BGTZL (taken)', () => {
+      cpu.setGpr(8, 10);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BGTZL $t0, +2 (opcode 010111)
+      memory.sw(MAIN_MEMORY_BASE, 0x5D000002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+    });
+
+    it('should execute BGTZL (not taken - skip delay slot)', () => {
+      cpu.setGpr(8, -5);
+      cpu.pc = MAIN_MEMORY_BASE;
+      memory.sw(MAIN_MEMORY_BASE, 0x5D000002);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+      expect(cpu.pc).toBe(MAIN_MEMORY_BASE + 8);
+    });
+
+    it('should execute BLEZL (taken)', () => {
+      cpu.setGpr(8, -10);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BLEZL $t0, +2 (opcode 010110)
+      memory.sw(MAIN_MEMORY_BASE, 0x59000002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+    });
+
+    it('should execute BGEZL (taken)', () => {
+      cpu.setGpr(8, 5);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BGEZL $t0, +2 (000001:rs:00011:imm16)
+      memory.sw(MAIN_MEMORY_BASE, 0x05030002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+    });
+
+    it('should execute BLTZL (taken)', () => {
+      cpu.setGpr(8, -10);
+      cpu.pc = MAIN_MEMORY_BASE;
+      // BLTZL $t0, +2 (000001:rs:00010:imm16)
+      memory.sw(MAIN_MEMORY_BASE, 0x05020002);
+      memory.sw(MAIN_MEMORY_BASE + 4, 0x00000000);
+      const result = interpreter.step(cpu);
+      expect(result).toBe(ExecutionResult.BRANCH);
+    });
+  });
+
   describe('Jump Operations', () => {
     it('should execute J', () => {
       cpu.pc = MAIN_MEMORY_BASE;
