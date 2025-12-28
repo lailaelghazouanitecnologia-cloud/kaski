@@ -465,4 +465,59 @@ export class Memory {
   getVramBuffer(): ArrayBuffer {
     return this.vramBuffer;
   }
+
+  /**
+   * Get a pointer to memory as Uint8Array
+   * Used by GPU for vertex/texture data access
+   */
+  getPointerU8Array(address: number, size?: number): Uint8Array {
+    if (this.isMainMemory(address)) {
+      const offset = this.mainOffset(address);
+      const actualSize = size ?? (this.mainU8.length - offset);
+      return this.mainU8.subarray(offset, offset + actualSize);
+    }
+    if (this.isVram(address)) {
+      const offset = this.vramOffset(address);
+      const actualSize = size ?? (this.vramU8.length - offset);
+      return this.vramU8.subarray(offset, offset + actualSize);
+    }
+    if (this.isScratchpad(address)) {
+      const offset = this.scratchpadOffset(address);
+      const actualSize = size ?? (this.scratchpadU8.length - offset);
+      return this.scratchpadU8.subarray(offset, offset + actualSize);
+    }
+    return new Uint8Array(size ?? 0);
+  }
+
+  /**
+   * Get a pointer to memory as Uint16Array
+   * Used by GPU for index data access
+   */
+  getPointerU16Array(address: number, size?: number): Uint16Array {
+    if (this.isMainMemory(address)) {
+      const offset = this.mainOffset(address);
+      const actualSize = size ? Math.floor(size / 2) : Math.floor((this.mainU16.length * 2 - offset) / 2);
+      return this.mainU16.subarray(offset >>> 1, (offset >>> 1) + actualSize);
+    }
+    // For VRAM/scratchpad, create a view from the Uint8Array
+    const u8 = this.getPointerU8Array(address, size);
+    if (u8.length === 0) return new Uint16Array(0);
+    return new Uint16Array(u8.buffer, u8.byteOffset, Math.floor(u8.length / 2));
+  }
+
+  /**
+   * Get a pointer to memory as Uint32Array
+   * Used by GPU for state data access
+   */
+  getPointerU32Array(address: number, size?: number): Uint32Array {
+    if (this.isMainMemory(address)) {
+      const offset = this.mainOffset(address);
+      const actualSize = size ? Math.floor(size / 4) : Math.floor((this.mainU32.length * 4 - offset) / 4);
+      return this.mainU32.subarray(offset >>> 2, (offset >>> 2) + actualSize);
+    }
+    // For VRAM/scratchpad, create a view from the Uint8Array
+    const u8 = this.getPointerU8Array(address, size);
+    if (u8.length === 0) return new Uint32Array(0);
+    return new Uint32Array(u8.buffer, u8.byteOffset, Math.floor(u8.length / 4));
+  }
 }
