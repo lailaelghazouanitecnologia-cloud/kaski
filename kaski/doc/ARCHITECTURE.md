@@ -114,9 +114,9 @@ kaski/src/core/
 - [x] madd/msub instructions
 - [x] Tests (251 passing)
 
-### Phase 3: Performance
-- [ ] Basic JIT (function caching)
-- [ ] Instruction cache
+### Phase 3: Performance (In Progress)
+- [x] Basic JIT (CodeGenerator + JitCache)
+- [ ] Advanced instruction coverage in JIT
 - [ ] Branch prediction hints
 
 ### Phase 4: Integration
