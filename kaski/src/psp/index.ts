@@ -6,3 +6,4 @@
 
 export * from './Psp';
 export * from './PspContext';
+export * from './html5';
