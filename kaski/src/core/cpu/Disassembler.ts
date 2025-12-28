@@ -1,29 +1,7 @@
 import { Instruction } from './Instruction';
 import { InstructionType } from './InstructionType';
 import { InstructionTable } from './InstructionTable';
-import { CpuState } from './CpuState';
-
-/**
- * MIPS register names
- */
-const GPR_NAMES = [
-  'zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3',
-  't0', 't1', 't2', 't3', 't4', 't5', 't6', 't7',
-  's0', 's1', 's2', 's3', 's4', 's5', 's6', 's7',
-  't8', 't9', 'k0', 'k1', 'gp', 'sp', 'fp', 'ra',
-];
-
-/**
- * FPU register names
- */
-const FPR_NAMES = Array.from({ length: 32 }, (_, i) => `f${i}`);
-
-/**
- * Format a number as hexadecimal
- */
-function hex(value: number, digits: number = 8): string {
-  return (value >>> 0).toString(16).padStart(digits, '0');
-}
+import { GPR_NAMES, FPR_NAMES, hex } from '../utils';
 
 /**
  * Disassembled instruction result

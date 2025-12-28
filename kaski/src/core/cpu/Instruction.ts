@@ -1,36 +1,8 @@
 import type { Memory } from '../memory';
+import { BitUtils, hex } from '../utils';
 
-/**
- * Bit manipulation utilities
- */
-export const BitUtils = {
-  /**
-   * Extract bits from a value
-   */
-  extract(value: number, offset: number, length: number): number {
-    return (value >>> offset) & ((1 << length) - 1);
-  },
-
-  /**
-   * Extract bits as signed value
-   */
-  extractSigned(value: number, offset: number, length: number): number {
-    const extracted = this.extract(value, offset, length);
-    const signBit = 1 << (length - 1);
-    if (extracted & signBit) {
-      return extracted - (1 << length);
-    }
-    return extracted;
-  },
-
-  /**
-   * Insert bits into a value
-   */
-  insert(value: number, offset: number, length: number, insert: number): number {
-    const mask = ((1 << length) - 1) << offset;
-    return (value & ~mask) | ((insert << offset) & mask);
-  },
-};
+// Re-export BitUtils for backwards compatibility
+export { BitUtils } from '../utils';
 
 /**
  * MIPS Instruction representation
@@ -219,7 +191,7 @@ export class Instruction {
    * Get hexadecimal representation
    */
   toHex(): string {
-    return (this.data >>> 0).toString(16).padStart(8, '0');
+    return hex(this.data);
   }
 
   /**

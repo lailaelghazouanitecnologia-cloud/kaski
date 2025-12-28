@@ -1,65 +1,8 @@
 import type { Memory } from '../memory';
+import { Register, VfpuCtrl, getGprName, hex } from '../utils';
 
-/**
- * MIPS Register Names
- * Standard MIPS R4000 register naming convention
- */
-export const enum Register {
-  ZERO = 0,  // Always zero
-  AT = 1,    // Assembler temporary
-  V0 = 2,    // Function return values
-  V1 = 3,
-  A0 = 4,    // Function arguments
-  A1 = 5,
-  A2 = 6,
-  A3 = 7,
-  T0 = 8,    // Temporaries (caller-saved)
-  T1 = 9,
-  T2 = 10,
-  T3 = 11,
-  T4 = 12,
-  T5 = 13,
-  T6 = 14,
-  T7 = 15,
-  S0 = 16,   // Saved registers (callee-saved)
-  S1 = 17,
-  S2 = 18,
-  S3 = 19,
-  S4 = 20,
-  S5 = 21,
-  S6 = 22,
-  S7 = 23,
-  T8 = 24,   // More temporaries
-  T9 = 25,
-  K0 = 26,   // Kernel registers
-  K1 = 27,
-  GP = 28,   // Global pointer
-  SP = 29,   // Stack pointer
-  FP = 30,   // Frame pointer (S8)
-  RA = 31,   // Return address
-}
-
-/**
- * VFPU Control Register Indices
- */
-export const enum VfpuCtrl {
-  SPREFIX = 0,
-  TPREFIX = 1,
-  DPREFIX = 2,
-  CC = 3,
-  INF4 = 4,
-  RSV5 = 5,
-  RSV6 = 6,
-  REV = 7,
-  RCX0 = 8,
-  RCX1 = 9,
-  RCX2 = 10,
-  RCX3 = 11,
-  RCX4 = 12,
-  RCX5 = 13,
-  RCX6 = 14,
-  RCX7 = 15,
-}
+// Re-export for backwards compatibility
+export { Register, VfpuCtrl } from '../utils';
 
 /**
  * Special addresses used by the emulator
@@ -405,32 +348,30 @@ export class CpuState {
   /**
    * Get register name by index
    */
-  static getRegisterName(index: number): string {
-    const names = [
-      'zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3',
-      't0', 't1', 't2', 't3', 't4', 't5', 't6', 't7',
-      's0', 's1', 's2', 's3', 's4', 's5', 's6', 's7',
-      't8', 't9', 'k0', 'k1', 'gp', 'sp', 'fp', 'ra'
-    ];
-    return names[index] ?? `r${index}`;
+  static getRegisterName(index: number): string
+  {
+    return getGprName(index);
   }
 
   /**
    * Dump GPR state for debugging
    */
-  dumpGpr(): string {
+  dumpGpr(): string
+  {
     const lines: string[] = [];
-    for (let i = 0; i < 32; i += 4) {
+    for (let i = 0; i < 32; i += 4)
+    {
       const regs = [];
-      for (let j = 0; j < 4; j++) {
+      for (let j = 0; j < 4; j++)
+      {
         const idx = i + j;
-        const name = CpuState.getRegisterName(idx).padEnd(4);
-        const value = (this.gpr[idx] >>> 0).toString(16).padStart(8, '0');
+        const name = getGprName(idx).padEnd(4);
+        const value = hex(this.gpr[idx]);
         regs.push(`${name}: 0x${value}`);
       }
       lines.push(regs.join('  '));
     }
-    lines.push(`PC: 0x${(this.pc >>> 0).toString(16).padStart(8, '0')}  HI: 0x${(this.hi >>> 0).toString(16).padStart(8, '0')}  LO: 0x${(this.lo >>> 0).toString(16).padStart(8, '0')}`);
+    lines.push(`PC: 0x${hex(this.pc)}  HI: 0x${hex(this.hi)}  LO: 0x${hex(this.lo)}`);
     return lines.join('\n');
   }
 }
