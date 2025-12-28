@@ -8,6 +8,14 @@ import { hleModule, nativeFunction } from '../manager/ModuleManager';
 import type { EmulatorContext } from '../EmulatorContext';
 import { PartitionId, MemoryAnchor } from '../manager/MemoryManager';
 import { SceKernelErrors } from '../errors';
+import { fromNullable, match } from '../../util/Result';
+
+// Allocation type mapping
+const ALLOC_TYPE_MAP: Record<number, MemoryAnchor | undefined> = {
+  0: MemoryAnchor.Low,
+  1: MemoryAnchor.High,
+  2: MemoryAnchor.Address,
+};
 
 @hleModule('SysMemUserForUser')
 export class SysMemUserForUser
@@ -42,15 +50,10 @@ export class SysMemUserForUser
     const addr = this.ctx.arg(4);
 
     const name = namePtr ? this.ctx.readString(namePtr) : 'unknown';
-
-    let anchor: MemoryAnchor;
-    switch (type)
+    const anchor = ALLOC_TYPE_MAP[type];
+    if (anchor === undefined)
     {
-      case 0: anchor = MemoryAnchor.Low; break;
-      case 1: anchor = MemoryAnchor.High; break;
-      case 2: anchor = MemoryAnchor.Address; break;
-      default:
-        return SceKernelErrors.ERROR_KERNEL_ILLEGAL_MEMBLOCK_ALLOC_TYPE;
+      return SceKernelErrors.ERROR_KERNEL_ILLEGAL_MEMBLOCK_ALLOC_TYPE;
     }
 
     const { block, error } = this.ctx.memoryManager.allocate(
@@ -81,14 +84,12 @@ export class SysMemUserForUser
   sceKernelFreePartitionMemory(): number
   {
     const blockId = this.ctx.arg(0);
-    const block = this.ctx.memoryManager.findByAddress(blockId);
 
-    if (!block)
-    {
-      return SceKernelErrors.ERROR_KERNEL_ILLEGAL_CHUNK_ID;
-    }
-
-    return this.ctx.memoryManager.free(block);
+    return match(
+      fromNullable(this.ctx.memoryManager.findByAddress(blockId), SceKernelErrors.ERROR_KERNEL_ILLEGAL_CHUNK_ID),
+      block => this.ctx.memoryManager.free(block),
+      error => error
+    );
   }
 
   /**
@@ -102,14 +103,12 @@ export class SysMemUserForUser
   sceKernelGetBlockHeadAddr(): number
   {
     const blockId = this.ctx.arg(0);
-    const block = this.ctx.memoryManager.findByAddress(blockId);
 
-    if (!block)
-    {
-      return 0;
-    }
-
-    return block.address;
+    return match(
+      fromNullable(this.ctx.memoryManager.findByAddress(blockId), 0),
+      block => block.address,
+      () => 0
+    );
   }
 
   /**

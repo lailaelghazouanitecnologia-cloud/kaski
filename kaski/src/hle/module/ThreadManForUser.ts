@@ -7,7 +7,8 @@
 import { hleModule, nativeFunction } from '../manager/ModuleManager';
 import type { EmulatorContext } from '../EmulatorContext';
 import { SceKernelErrors } from '../errors';
-import { ThreadAttributes, ThreadStatus } from '../manager/ThreadManager';
+import { ThreadStatus } from '../manager/ThreadManager';
+import { fromNullable, match } from '../../util/Result';
 
 @hleModule('ThreadManForUser')
 export class ThreadManForUser
@@ -137,17 +138,17 @@ export class ThreadManForUser
   sceKernelTerminateThread(): number
   {
     const thid = this.ctx.arg(0);
-    const thread = this.ctx.threadManager.getThread(thid);
 
-    if (!thread)
-    {
-      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
-    }
-
-    thread.status = ThreadStatus.DORMANT;
-    thread.exitStatus = 0x800201A4; // SCE_KERNEL_ERROR_THREAD_TERMINATED
-
-    return 0;
+    return match(
+      fromNullable(this.ctx.threadManager.getThread(thid), SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD),
+      thread =>
+      {
+        thread.status = ThreadStatus.DORMANT;
+        thread.exitStatus = 0x800201A4; // SCE_KERNEL_ERROR_THREAD_TERMINATED
+        return 0;
+      },
+      error => error
+    );
   }
 
   /**
@@ -187,8 +188,11 @@ export class ThreadManForUser
   @nativeFunction(0x293B45B8, 150)
   sceKernelGetThreadId(): number
   {
-    const thread = this.ctx.threadManager.getCurrentThread();
-    return thread?.uid ?? SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
+    return match(
+      fromNullable(this.ctx.threadManager.getCurrentThread(), SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD),
+      thread => thread.uid,
+      error => error
+    );
   }
 
   /**

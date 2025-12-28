@@ -7,7 +7,36 @@
 import { hleModule, nativeFunction } from '../manager/ModuleManager';
 import type { EmulatorContext } from '../EmulatorContext';
 import { SceKernelErrors } from '../errors';
-import { OpenFlags, SeekMode, FileMode } from '../vfs/types';
+import { OpenFlags, SeekMode } from '../vfs/types';
+import { BitFlags } from '../../util/BitFlags';
+
+// PSP open flags
+const enum PspOpenFlags
+{
+  Read = 0x0001,
+  Write = 0x0002,
+  Append = 0x0100,
+  Create = 0x0200,
+  Truncate = 0x0400,
+  Exclusive = 0x0800,
+}
+
+// Flag mapping from PSP to internal
+const OPEN_FLAGS_MAP = [
+  [PspOpenFlags.Read, OpenFlags.Read],
+  [PspOpenFlags.Write, OpenFlags.Write],
+  [PspOpenFlags.Append, OpenFlags.Append],
+  [PspOpenFlags.Create, OpenFlags.Create],
+  [PspOpenFlags.Truncate, OpenFlags.Truncate],
+  [PspOpenFlags.Exclusive, OpenFlags.Exclusive],
+] as const;
+
+// Seek mode mapping
+const SEEK_MODE_MAP: Record<number, SeekMode | undefined> = {
+  0: SeekMode.Set,
+  1: SeekMode.Current,
+  2: SeekMode.End,
+};
 
 @hleModule('IoFileMgrForUser')
 export class IoFileMgrForUser
@@ -38,20 +67,14 @@ export class IoFileMgrForUser
   sceIoOpen(): number | Promise<number>
   {
     const filePtr = this.ctx.argPtr(0);
-    const flags = this.ctx.arg(1);
+    const pspFlags = this.ctx.arg(1);
     const mode = this.ctx.arg(2);
 
     const file = this.ctx.readString(filePtr);
-    this.ctx.log(`sceIoOpen("${file}", 0x${flags.toString(16)}, 0x${mode.toString(16)})`);
+    this.ctx.log(`sceIoOpen("${file}", 0x${pspFlags.toString(16)}, 0x${mode.toString(16)})`);
 
-    // Convert PSP flags to our flags
-    let openFlags: OpenFlags = 0;
-    if (flags & 0x0001) openFlags |= OpenFlags.Read;
-    if (flags & 0x0002) openFlags |= OpenFlags.Write;
-    if (flags & 0x0100) openFlags |= OpenFlags.Append;
-    if (flags & 0x0200) openFlags |= OpenFlags.Create;
-    if (flags & 0x0400) openFlags |= OpenFlags.Truncate;
-    if (flags & 0x0800) openFlags |= OpenFlags.Exclusive;
+    // Convert PSP flags to internal flags
+    const openFlags = BitFlags.map(pspFlags, OPEN_FLAGS_MAP).value as OpenFlags;
 
     return this.ctx.fileManager.open(file, openFlags, mode).then(result =>
     {
@@ -213,18 +236,13 @@ export class IoFileMgrForUser
     const fd = this.ctx.arg(0);
     // Offset is 64-bit, passed in a1:a2 (MIPS calling convention)
     const offsetLow = this.ctx.arg(2);
-    const offsetHigh = this.ctx.arg(3);
     const whence = this.ctx.arg(4);
 
     const offset = offsetLow; // For now, ignore high bits
-
-    let mode: SeekMode;
-    switch (whence)
+    const mode = SEEK_MODE_MAP[whence];
+    if (mode === undefined)
     {
-      case 0: mode = SeekMode.Set; break;
-      case 1: mode = SeekMode.Current; break;
-      case 2: mode = SeekMode.End; break;
-      default: return SceKernelErrors.ERROR_ERRNO_INVALID_ARGUMENT;
+      return SceKernelErrors.ERROR_ERRNO_INVALID_ARGUMENT;
     }
 
     return this.ctx.fileManager.seek(fd, offset, mode).then(result =>
@@ -255,13 +273,10 @@ export class IoFileMgrForUser
     const offset = this.ctx.arg(1);
     const whence = this.ctx.arg(2);
 
-    let mode: SeekMode;
-    switch (whence)
+    const mode = SEEK_MODE_MAP[whence];
+    if (mode === undefined)
     {
-      case 0: mode = SeekMode.Set; break;
-      case 1: mode = SeekMode.Current; break;
-      case 2: mode = SeekMode.End; break;
-      default: return SceKernelErrors.ERROR_ERRNO_INVALID_ARGUMENT;
+      return SceKernelErrors.ERROR_ERRNO_INVALID_ARGUMENT;
     }
 
     return this.ctx.fileManager.seek(fd, offset, mode).then(result =>
