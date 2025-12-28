@@ -164,7 +164,7 @@ All addresses are masked with `0x0FFFFFFF` for region mapping.
 | Total Lines | 165K+ | ~4K |
 | CPU Core Lines | 1,844 | ~1,200 |
 | Instruction Handlers | 623 | ~150 |
-| Test Coverage | Limited | 251 tests |
+| Test Coverage | Limited | 282 tests |
 | Dependencies | Many | Minimal (Bun) |
 
 ## File Reference
@@ -176,7 +176,9 @@ All addresses are masked with `0x0FFFFFFF` for region mapping.
 - `legacy/src/core/cpu/cpu_ast.ts` - Code AST
 
 ### Kaski Key Files
-- `kaski/src/core/cpu/Cpu.ts` - Controller
-- `kaski/src/core/cpu/Interpreter.ts` - Execution
-- `kaski/src/core/cpu/InstructionTable.ts` - Definitions
-- `kaski/tests/*.test.ts` - 225 tests
+- `kaski/src/core/cpu/Cpu.ts` - CPU controller with interpreter/JIT modes
+- `kaski/src/core/cpu/Interpreter.ts` - Instruction execution
+- `kaski/src/core/cpu/CodeGenerator.ts` - JIT code generation
+- `kaski/src/core/cpu/JitCache.ts` - Compiled function cache
+- `kaski/src/core/cpu/InstructionTable.ts` - Instruction definitions
+- `kaski/tests/*.test.ts` - 282 tests

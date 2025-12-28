@@ -294,4 +294,134 @@ describe('Cpu', () => {
       expect(cpu.getGpr(8)).toBe(5);  // t0 = 5 after loop
     });
   });
+
+  describe('JIT Execution', () => {
+    it('should execute simple program with JIT', () => {
+      cpu.loadWords([
+        0x2408002A,  // ADDIU $t0, $zero, 42
+        0x2409000A,  // ADDIU $t1, $zero, 10
+        0x01095020,  // ADD $t2, $t0, $t1
+        0x0000000C,  // SYSCALL
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      const status = cpu.runJit(100);
+
+      expect(status).toBe(CpuStatus.SYSCALL);
+      expect(cpu.getGpr(8)).toBe(42);
+      expect(cpu.getGpr(9)).toBe(10);
+      expect(cpu.getGpr(10)).toBe(52);
+    });
+
+    it('should execute function call with JIT', () => {
+      // JAL to function, function sets t0 = 42, returns
+      cpu.loadWords([
+        0x0E000006,  // JAL to 0x08000018 (function)
+        0x00000000,  // NOP (delay slot)
+        0x0000000C,  // SYSCALL (after return)
+        0x00000000,  // padding
+        0x00000000,  // padding
+        0x00000000,  // padding
+        0x2408002A,  // Function: ADDIU $t0, $zero, 42
+        0x03E00008,  // JR $ra
+        0x00000000,  // NOP (delay slot)
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      const status = cpu.runJit(100);
+
+      expect(status).toBe(CpuStatus.SYSCALL);
+      expect(cpu.getGpr(8)).toBe(42);
+    });
+
+    it('should report JIT statistics', () => {
+      cpu.loadWords([
+        0x2408002A,  // ADDIU $t0, $zero, 42
+        0x0000000C,  // SYSCALL
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      cpu.runJit(100);
+
+      const stats = cpu.getJitStats();
+      expect(stats).toContain('Cache size:');
+      expect(stats).toContain('Compilations:');
+    });
+
+    it('should invalidate JIT cache on reset', () => {
+      cpu.loadWords([
+        0x2408002A,  // ADDIU $t0, $zero, 42
+        0x0000000C,  // SYSCALL
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      cpu.runJit(100);
+      const statsBeforeReset = cpu.getJitStats();
+      expect(statsBeforeReset).toContain('Compilations: 1');
+
+      cpu.reset();
+
+      // After reset, cache should be cleared
+      cpu.loadWords([
+        0x2408002A,
+        0x0000000C,
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      cpu.runJit(100);
+      const statsAfterReset = cpu.getJitStats();
+      expect(statsAfterReset).toContain('Compilations: 1'); // New compilation
+    });
+
+    it('should handle breakpoints in JIT mode (at block start)', () => {
+      // Breakpoint at start of second block (after jump)
+      const funcAddr = MAIN_MEMORY_BASE + 0x100;
+      // J encoding: 0x08000000 | (target >> 2)
+      // target = 0x08000100, target >> 2 = 0x02000040
+      const jInstr = 0x08000000 | ((funcAddr >> 2) & 0x03FFFFFF);
+
+      cpu.loadWords([
+        0x24080001,  // ADDIU $t0, $zero, 1
+        jInstr,      // J to funcAddr
+        0x00000000,  // NOP (delay slot)
+        0x0000000C,  // SYSCALL (not reached)
+      ], MAIN_MEMORY_BASE);
+
+      cpu.loadWords([
+        0x24080002,  // ADDIU $t0, $zero, 2
+        0x0000000C,  // SYSCALL
+      ], funcAddr);
+
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      // Add breakpoint at function entry (start of new block)
+      cpu.addBreakpoint(funcAddr);
+
+      const status = cpu.runJit(100);
+
+      expect(status).toBe(CpuStatus.BREAKPOINT);
+      expect(cpu.pc).toBe(funcAddr);
+      expect(cpu.getGpr(8)).toBe(1);  // First instruction executed
+    });
+
+    it('should execute loop with JIT', () => {
+      // t0 = 0, t1 = 10
+      // loop: t0++, if t0 < t1 goto loop
+      cpu.loadWords([
+        0x24080000,  // ADDIU $t0, $zero, 0
+        0x2409000A,  // ADDIU $t1, $zero, 10
+        0x25080001,  // loop: ADDIU $t0, $t0, 1
+        0x0109082A,  // SLT $at, $t0, $t1
+        0x1420FFFD,  // BNE $at, $zero, -3 (back to loop)
+        0x00000000,  // NOP (delay slot)
+        0x0000000C,  // SYSCALL
+      ], MAIN_MEMORY_BASE);
+      cpu.setEntryPoint(MAIN_MEMORY_BASE);
+
+      const status = cpu.runJit(100);
+
+      expect(status).toBe(CpuStatus.SYSCALL);
+      expect(cpu.getGpr(8)).toBe(10);  // t0 = 10 after loop
+    });
+  });
 });

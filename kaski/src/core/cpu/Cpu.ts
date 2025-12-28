@@ -4,6 +4,7 @@ import { Instruction } from './Instruction';
 import { Interpreter, ExecutionResult } from './Interpreter';
 import { InstructionTable } from './InstructionTable';
 import { disassembler, type DisassemblyResult } from './Disassembler';
+import { JitCache } from './JitCache';
 
 /**
  * CPU execution mode
@@ -95,11 +96,27 @@ export class Cpu {
   /** Cycles counter (approximation) */
   private _cycles: number = 0;
 
-  constructor(memory?: Memory) {
+  /** JIT cache (lazily initialized) */
+  private _jitCache: JitCache | null = null;
+
+  constructor(memory?: Memory)
+  {
     this.memory = memory ?? new Memory();
     this.state = new CpuState(this.memory);
     this.interpreter = new Interpreter();
     this.table = InstructionTable.instance;
+  }
+
+  /**
+   * Get JIT cache (lazy initialization)
+   */
+  private get jitCache(): JitCache
+  {
+    if (this._jitCache === null)
+    {
+      this._jitCache = new JitCache(this.memory);
+    }
+    return this._jitCache;
   }
 
   // ============================================
@@ -317,6 +334,126 @@ export class Cpu {
   }
 
   /**
+   * Run using JIT compilation for better performance
+   *
+   * This executes compiled basic blocks instead of interpreting
+   * instruction by instruction. Falls back to interpreter for
+   * unsupported instructions.
+   */
+  runJit(maxBlocks: number = 100000): CpuStatus
+  {
+    this._status = CpuStatus.RUNNING;
+
+    for (let i = 0; i < maxBlocks; i++)
+    {
+      // Check for breakpoint
+      if (this.hasBreakpoint(this.state.pc))
+      {
+        if (this.events.onBreakpoint)
+        {
+          const shouldContinue = this.events.onBreakpoint(this, this.state.pc);
+          if (!shouldContinue)
+          {
+            this._status = CpuStatus.BREAKPOINT;
+            return this._status;
+          }
+        }
+        else
+        {
+          this._status = CpuStatus.BREAKPOINT;
+          return this._status;
+        }
+      }
+
+      try
+      {
+        // Execute compiled block
+        const nextPc = this.jitCache.execute(this.state, this.state.pc);
+
+        // Get block info for statistics
+        const cached = this.jitCache.get(this.state.pc);
+        if (cached.info)
+        {
+          this._instructionsExecuted += cached.info.instructionCount;
+          this._cycles += cached.info.instructionCount;
+        }
+        else
+        {
+          this._instructionsExecuted++;
+          this._cycles++;
+        }
+
+        // Handle special return values
+        if (nextPc === -1)
+        {
+          // Syscall
+          if (this.events.onSyscall)
+          {
+            const instr = Instruction.fromMemory(this.memory, this.state.pc);
+            this.events.onSyscall(this, instr.syscall);
+          }
+          this._status = CpuStatus.SYSCALL;
+          return this._status;
+        }
+        else if (nextPc === -2)
+        {
+          // Break
+          this._status = CpuStatus.BREAKPOINT;
+          return this._status;
+        }
+      }
+      catch (error)
+      {
+        this._status = CpuStatus.ERROR;
+        if (this.events.onError)
+        {
+          this.events.onError(this, error as Error);
+        }
+        return this._status;
+      }
+    }
+
+    return this._status;
+  }
+
+  /**
+   * Set execution mode
+   */
+  setMode(mode: CpuMode): void
+  {
+    this.mode = mode;
+  }
+
+  /**
+   * Get current execution mode
+   */
+  getMode(): CpuMode
+  {
+    return this.mode;
+  }
+
+  /**
+   * Get JIT cache statistics
+   */
+  getJitStats(): string
+  {
+    return this.jitCache.getStats();
+  }
+
+  /**
+   * Invalidate JIT cache for a memory range
+   *
+   * Call this after modifying executable memory
+   */
+  invalidateJitRange(from: number, to: number): void
+  {
+    if (this._jitCache)
+    {
+      this._jitCache.invalidateRange(from, to);
+    }
+  }
+
+  /**
    * Stop execution
    */
   stop(): void {
@@ -326,11 +463,16 @@ export class Cpu {
   /**
    * Reset CPU to initial state
    */
-  reset(): void {
+  reset(): void
+  {
     this.state.reset();
     this._status = CpuStatus.STOPPED;
     this._instructionsExecuted = 0;
     this._cycles = 0;
+    if (this._jitCache)
+    {
+      this._jitCache.clear();
+    }
   }
 
   // ============================================
