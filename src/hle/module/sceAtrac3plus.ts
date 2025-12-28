@@ -259,19 +259,87 @@ export class sceAtrac3plus {
 		return 0;
 	}
 
+	/**
+	 * Get buffer info for resetting playback position
+	 * Based on PPSSPP implementation
+	 */
 	@nativeFunction(0xCA3CA3D2, 150)
-	@U32 sceAtracGetBufferInfoForReseting(@I32 id: number, @U32 uiSample: number, @PTR bufferInfoPtr: Stream) {
-		throw new Error("Not implemented sceAtracGetBufferInfoForReseting");
+	@U32 sceAtracGetBufferInfoForReseting(@I32 atID: number, @U32 uiSample: number, @PTR bufferInfoPtr: Stream) {
+		if (!this.hasById(atID)) return SceKernelErrors.ATRAC_ERROR_NO_ATRACID;
+		const atrac = this.getAtrac(atID);
+		const info = atrac.info;
+
+		// Calculate file position based on sample
+		const samplesPerFrame = this.getMaxSamples(Atrac3plusConstants.PSP_CODEC_AT3PLUS);
+		const frameNum = Math.floor(uiSample / samplesPerFrame);
+		const filePos = info.inputFileDataOffset + (frameNum * info.atracBytesPerFrame);
+
+		// Write AtracResetBufferInfo structure
+		// writePos (first buffer write position info)
+		bufferInfoPtr.writeInt32(filePos);           // writePos.filePos
+		bufferInfoPtr.writeInt32(atrac.startAddr);   // writePos.addr
+		bufferInfoPtr.writeInt32(atrac.byteLength);  // writePos.size
+
+		// writePos offset info
+		bufferInfoPtr.writeInt32(0);                 // writePos.offset (usually 0)
+
+		// readPos (read position info for streaming)
+		bufferInfoPtr.writeInt32(filePos);           // readPos.filePos
+		bufferInfoPtr.writeInt32(atrac.startAddr);   // readPos.addr
+		bufferInfoPtr.writeInt32(atrac.byteLength);  // readPos.size
+
+		// readPos offset info
+		bufferInfoPtr.writeInt32(0);                 // readPos.offset
+
+		return 0;
 	}
 
+	/**
+	 * Reset playback position to a specific sample
+	 * Based on PPSSPP implementation
+	 */
 	@nativeFunction(0x644E5607, 150)
-	@U32 sceAtracResetPlayPosition(@I32 id: number, @U32 uiSample: number, @U32 uiWriteByteFirstBuf: number, @U32 uiWriteByteSecondBuf: number) {
-		throw new Error("Not implemented sceAtracResetPlayPosition");
+	@U32 sceAtracResetPlayPosition(@I32 atID: number, @U32 uiSample: number, @U32 uiWriteByteFirstBuf: number, @U32 uiWriteByteSecondBuf: number) {
+		if (!this.hasById(atID)) return SceKernelErrors.ATRAC_ERROR_NO_ATRACID;
+		const atrac = this.getAtrac(atID);
+		const info = atrac.info;
+
+		// Validate sample position
+		if (uiSample > info.atracEndSample) {
+			return SceKernelErrors.ATRAC_ERROR_BAD_ATRACID;
+		}
+
+		// Calculate new frame position based on sample
+		const samplesPerFrame = this.getMaxSamples(Atrac3plusConstants.PSP_CODEC_AT3PLUS);
+		const targetFrame = Math.floor(uiSample / samplesPerFrame);
+
+		// Reset decoder state
+		atrac.currentFrame = targetFrame;
+		atrac.readAddr = atrac.startAddr + (targetFrame * info.atracBytesPerFrame);
+		atrac.atracCurrentSample = uiSample;
+
+		// Reset decoder if needed
+		atrac.decoder.init(info.atracBytesPerFrame, info.atracChannels, 2, 0);
+
+		// Return with delay like PPSSPP (3000 microseconds)
+		this.context.threadManager.delayThread(3000);
+		return 0;
 	}
 
+	/**
+	 * Get internal codec error information
+	 * Based on PPSSPP implementation
+	 */
 	@nativeFunction(0xE88F759B, 150)
-	@U32 sceAtracGetInternalErrorInfo(@I32 id: number, @PTR errorResultPtr: Stream) {
-		throw new Error("Not implemented sceAtracGetInternalErrorInfo");
+	@U32 sceAtracGetInternalErrorInfo(@I32 atID: number, @PTR errorResultPtr: Stream) {
+		if (!this.hasById(atID)) return SceKernelErrors.ATRAC_ERROR_NO_ATRACID;
+		const atrac = this.getAtrac(atID);
+
+		// Get internal error from decoder (0 if no error)
+		const errorCode = 0; // atrac.decoder doesn't expose internal error yet
+		errorResultPtr.writeInt32(errorCode);
+
+		return 0;
 	}
 
 	@nativeFunction(0xB3B5D042, 150)

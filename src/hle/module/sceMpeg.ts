@@ -18,8 +18,7 @@ import {
 } from "../../global/struct";
 import {Integer64} from "../../global/int64";
 
-const ENABLE = false;
-//const ENABLE = true;
+const ENABLE = true;
 
 export class sceMpeg {
 	constructor(private context: EmulatorContext) { }
