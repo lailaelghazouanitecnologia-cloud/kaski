@@ -197,8 +197,20 @@ export class EmulatorContext
     return this.memory.readString(address, maxLength);
   }
 
+  /** Read null-terminated string from memory (alias) */
+  readStringZ(address: number, maxLength: number = 256): string
+  {
+    return this.memory.readString(address, maxLength);
+  }
+
   /** Write null-terminated string to memory */
   writeString(address: number, str: string): void
+  {
+    this.memory.writeString(address, str);
+  }
+
+  /** Write null-terminated string to memory (alias) */
+  writeStringZ(address: number, str: string): void
   {
     this.memory.writeString(address, str);
   }
@@ -237,6 +249,21 @@ export class EmulatorContext
   write8(address: number, value: number): void
   {
     this.memory.sb(address, value);
+  }
+
+  /** Read 64-bit value from memory */
+  read64(address: number): bigint
+  {
+    const low = this.memory.lw(address) >>> 0;
+    const high = this.memory.lw(address + 4) >>> 0;
+    return BigInt(low) | (BigInt(high) << 32n);
+  }
+
+  /** Write 64-bit value to memory */
+  write64(address: number, value: bigint): void
+  {
+    this.memory.sw(address, Number(value & 0xFFFFFFFFn));
+    this.memory.sw(address + 4, Number((value >> 32n) & 0xFFFFFFFFn));
   }
 
   // ============================================

@@ -9,3 +9,4 @@ export * from './manager';
 export * from './vfs';
 export * from './module';
 export * from './EmulatorContext';
+export * from './ProgramLoader';

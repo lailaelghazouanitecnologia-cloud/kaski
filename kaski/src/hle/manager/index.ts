@@ -11,3 +11,4 @@ export * from './DisplayManager';
 export * from './InputManager';
 export * from './GpuManager';
 export * from './AudioManager';
+export * from './SyscallManager';
