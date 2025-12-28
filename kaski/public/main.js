@@ -15694,8 +15694,11 @@ async function loadRom(data, filename) {
   log(`Framebuffer: addr=0x${fb.address.toString(16)}, width=${fb.bufferWidth}, format=${fb.pixelFormat}`);
   const firstPixel = memory.lwu(VRAM_BASE2);
   log(`First VRAM pixel: 0x${firstPixel.toString(16)}`);
-  platform.html5Display.render();
-  log("ROM loaded successfully - test pattern should be visible");
+  requestAnimationFrame(() => {
+    platform.html5Display.render();
+    log("Test pattern rendered");
+  });
+  log("ROM loaded successfully");
   startBtn.disabled = false;
   stepBtn.disabled = false;
   resetBtn.disabled = false;

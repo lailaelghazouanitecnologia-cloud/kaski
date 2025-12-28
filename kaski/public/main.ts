@@ -207,10 +207,13 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
   const firstPixel = memory.lwu(VRAM_BASE);
   log(`First VRAM pixel: 0x${firstPixel.toString(16)}`);
 
-  // Render test pattern immediately
-  platform.html5Display.render();
+  // Use requestAnimationFrame to ensure canvas is ready
+  requestAnimationFrame(() => {
+    platform!.html5Display.render();
+    log('Test pattern rendered');
+  });
 
-  log('ROM loaded successfully - test pattern should be visible');
+  log('ROM loaded successfully');
 
   // Enable buttons
   startBtn.disabled = false;
