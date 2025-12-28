@@ -415,6 +415,44 @@ export class Memory {
   }
 
   /**
+   * Load word as float (alias for lwc1)
+   */
+  lwFloat(address: number): number {
+    return this.lwc1(address);
+  }
+
+  /**
+   * Store float as word (alias for swc1)
+   */
+  swFloat(address: number, value: number): void {
+    this.swc1(address, value);
+  }
+
+  /**
+   * Load double (64-bit float)
+   */
+  ldFloat(address: number): number {
+    const low = this.lwu(address);
+    const high = this.lwu(address + 4);
+    const tempBuffer = new ArrayBuffer(8);
+    const u32 = new Uint32Array(tempBuffer);
+    u32[0] = low;
+    u32[1] = high;
+    return new Float64Array(tempBuffer)[0];
+  }
+
+  /**
+   * Store double (64-bit float)
+   */
+  sdFloat(address: number, value: number): void {
+    const tempBuffer = new ArrayBuffer(8);
+    new Float64Array(tempBuffer)[0] = value;
+    const u32 = new Uint32Array(tempBuffer);
+    this.sw(address, u32[0]);
+    this.sw(address + 4, u32[1]);
+  }
+
+  /**
    * Get direct access to main memory buffer
    */
   getMainBuffer(): ArrayBuffer {
