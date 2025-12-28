@@ -20,6 +20,37 @@ export class UidCollection<T>
   }
 
   /**
+   * Get the next available UID without allocating
+   * (for when you need to create an object with the UID first)
+   */
+  nextId(): number
+  {
+    if (this.freeUids.length > 0)
+    {
+      return this.freeUids[this.freeUids.length - 1];
+    }
+    return this.nextUid;
+  }
+
+  /**
+   * Set an item at a UID (creates or replaces)
+   */
+  set(uid: number, item: T): void
+  {
+    this.items.set(uid, item);
+    if (uid >= this.nextUid)
+    {
+      this.nextUid = uid + 1;
+    }
+    // Remove from free list if present
+    const freeIdx = this.freeUids.indexOf(uid);
+    if (freeIdx !== -1)
+    {
+      this.freeUids.splice(freeIdx, 1);
+    }
+  }
+
+  /**
    * Allocate a new UID for an item
    */
   allocate(item: T): number
