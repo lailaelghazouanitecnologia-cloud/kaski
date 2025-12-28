@@ -14638,13 +14638,32 @@ class Html5Display {
     if (!this.ctx || !this.imageData)
       return;
     const fb = this.display.getFrameBuf();
+    if (this.frameCount === 0) {
+      console.log("[Html5Display] First render:", {
+        address: "0x" + fb.address.toString(16),
+        bufferWidth: fb.bufferWidth,
+        pixelFormat: fb.pixelFormat
+      });
+    }
     this.renderFramebuffer(fb.address, fb.bufferWidth, fb.pixelFormat);
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = SCREEN_WIDTH;
-    tempCanvas.height = SCREEN_HEIGHT;
-    const tempCtx = tempCanvas.getContext("2d");
-    tempCtx.putImageData(this.imageData, 0, 0);
-    this.ctx.drawImage(tempCanvas, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, this.canvas.width, this.canvas.height);
+    if (this.frameCount === 0) {
+      const pixels = this.imageData.data;
+      console.log("[Html5Display] Pixel samples:", {
+        "px[0,0]": [pixels[0], pixels[1], pixels[2], pixels[3]],
+        "px[100,100]": [pixels[100 * SCREEN_WIDTH * 4], pixels[100 * SCREEN_WIDTH * 4 + 1], pixels[100 * SCREEN_WIDTH * 4 + 2], pixels[100 * SCREEN_WIDTH * 4 + 3]],
+        "px[240,136]": [pixels[136 * SCREEN_WIDTH * 4 + 240 * 4], pixels[136 * SCREEN_WIDTH * 4 + 240 * 4 + 1], pixels[136 * SCREEN_WIDTH * 4 + 240 * 4 + 2], pixels[136 * SCREEN_WIDTH * 4 + 240 * 4 + 3]]
+      });
+    }
+    this.ctx.putImageData(this.imageData, 0, 0);
+    if (this.scale > 1) {
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = SCREEN_WIDTH;
+      tempCanvas.height = SCREEN_HEIGHT;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.putImageData(this.imageData, 0, 0);
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(tempCanvas, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, this.canvas.width, this.canvas.height);
+    }
     this.updateFps();
   }
   renderFramebuffer(address, stride, format2) {
@@ -14652,6 +14671,16 @@ class Html5Display {
       return;
     const pixels = this.imageData.data;
     const bytesPerPixel = this.getBytesPerPixel(format2);
+    if (this.frameCount === 0) {
+      const raw0 = this.memory.lwu(address);
+      const raw100 = this.memory.lwu(address + (100 * stride + 100) * bytesPerPixel);
+      console.log("[Html5Display] Raw memory:", {
+        "mem[0,0]": "0x" + raw0.toString(16),
+        "mem[100,100]": "0x" + raw100.toString(16),
+        bytesPerPixel,
+        stride
+      });
+    }
     for (let y = 0;y < SCREEN_HEIGHT; y++) {
       for (let x = 0;x < SCREEN_WIDTH; x++) {
         const srcOffset = address + (y * stride + x) * bytesPerPixel;
@@ -14667,39 +14696,39 @@ class Html5Display {
   readPixel(address, format2) {
     switch (format2) {
       case 3 /* RGBA_8888 */: {
-        const value = this.memory.lw(address);
+        const value = this.memory.lwu(address);
         return {
           r: value & 255,
-          g: value >> 8 & 255,
-          b: value >> 16 & 255,
-          a: value >> 24 & 255
+          g: value >>> 8 & 255,
+          b: value >>> 16 & 255,
+          a: value >>> 24 & 255
         };
       }
       case PixelFormat.RGB_565: {
-        const value = this.memory.lh(address);
+        const value = this.memory.lhu(address);
         return {
           r: (value & 31) << 3 | (value & 31) >> 2,
-          g: (value >> 5 & 63) << 2 | (value >> 5 & 63) >> 4,
-          b: (value >> 11 & 31) << 3 | (value >> 11 & 31) >> 2,
+          g: (value >>> 5 & 63) << 2 | (value >>> 5 & 63) >> 4,
+          b: (value >>> 11 & 31) << 3 | (value >>> 11 & 31) >> 2,
           a: 255
         };
       }
       case 1 /* RGBA_5551 */: {
-        const value = this.memory.lh(address);
+        const value = this.memory.lhu(address);
         return {
           r: (value & 31) << 3 | (value & 31) >> 2,
-          g: (value >> 5 & 31) << 3 | (value >> 5 & 31) >> 2,
-          b: (value >> 10 & 31) << 3 | (value >> 10 & 31) >> 2,
+          g: (value >>> 5 & 31) << 3 | (value >>> 5 & 31) >> 2,
+          b: (value >>> 10 & 31) << 3 | (value >>> 10 & 31) >> 2,
           a: value & 32768 ? 255 : 0
         };
       }
       case 2 /* RGBA_4444 */: {
-        const value = this.memory.lh(address);
+        const value = this.memory.lhu(address);
         return {
           r: (value & 15) << 4 | value & 15,
-          g: (value >> 4 & 15) << 4 | value >> 4 & 15,
-          b: (value >> 8 & 15) << 4 | value >> 8 & 15,
-          a: (value >> 12 & 15) << 4 | value >> 12 & 15
+          g: (value >>> 4 & 15) << 4 | value >>> 4 & 15,
+          b: (value >>> 8 & 15) << 4 | value >>> 8 & 15,
+          a: (value >>> 12 & 15) << 4 | value >>> 12 & 15
         };
       }
       default:
