@@ -207,13 +207,15 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
   const firstPixel = memory.lwu(VRAM_BASE);
   log(`First VRAM pixel: 0x${firstPixel.toString(16)}`);
 
-  // Use requestAnimationFrame to ensure canvas is ready
+  // Render immediately
+  platform.html5Display.render();
+
+  // Also render on next frame to ensure visibility
   requestAnimationFrame(() => {
-    platform!.html5Display.render();
-    log('Test pattern rendered');
+    platform?.html5Display.render();
   });
 
-  log('ROM loaded successfully');
+  log('ROM loaded - gradient should be visible');
 
   // Enable buttons
   startBtn.disabled = false;

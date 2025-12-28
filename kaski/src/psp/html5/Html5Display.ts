@@ -104,61 +104,21 @@ export class Html5Display
 
     const fb = this.display.getFrameBuf();
 
-    // Debug: log framebuffer info on first render only (use a static flag)
-    if (!(Html5Display as any)._debugDone)
-    {
-      (Html5Display as any)._debugDone = true;
-      console.log(`[Html5Display] FB: addr=0x${fb.address.toString(16)}, width=${fb.bufferWidth}, format=${fb.pixelFormat}`);
-
-      // Test memory reads BEFORE render
-      const testAddr = fb.address;
-      const raw0 = this.memory.lwu(testAddr);
-      const raw100 = this.memory.lwu(testAddr + (100 * fb.bufferWidth + 100) * 4);
-      const raw200 = this.memory.lwu(testAddr + (200 * fb.bufferWidth + 200) * 4);
-      console.log(`[Html5Display] Raw mem BEFORE render:`);
-      console.log(`  [0,0]: 0x${raw0.toString(16).padStart(8,'0')} -> R=${raw0 & 0xFF}, G=${(raw0>>>8)&0xFF}, B=${(raw0>>>16)&0xFF}, A=${(raw0>>>24)&0xFF}`);
-      console.log(`  [100,100]: 0x${raw100.toString(16).padStart(8,'0')} -> R=${raw100 & 0xFF}, G=${(raw100>>>8)&0xFF}, B=${(raw100>>>16)&0xFF}, A=${(raw100>>>24)&0xFF}`);
-      console.log(`  [200,200]: 0x${raw200.toString(16).padStart(8,'0')} -> R=${raw200 & 0xFF}, G=${(raw200>>>8)&0xFF}, B=${(raw200>>>16)&0xFF}, A=${(raw200>>>24)&0xFF}`);
-    }
-
     this.renderFramebuffer(fb.address, fb.bufferWidth, fb.pixelFormat);
 
-    // Debug: check imageData after render
-    if ((Html5Display as any)._debugDone && !(Html5Display as any)._debugDone2)
-    {
-      (Html5Display as any)._debugDone2 = true;
-      const pixels = this.imageData.data;
-      // Correct indexing: (y * width + x) * 4
-      const idx0 = 0;  // pixel (0,0)
-      const idx100 = (100 * SCREEN_WIDTH + 100) * 4;  // pixel (100,100)
-      const idx200 = (200 * SCREEN_WIDTH + 200) * 4;  // pixel (200,200)
-      console.log(`[Html5Display] ImageData AFTER render:`);
-      console.log(`  px[0,0]: R=${pixels[idx0]}, G=${pixels[idx0+1]}, B=${pixels[idx0+2]}, A=${pixels[idx0+3]}`);
-      console.log(`  px[100,100]: R=${pixels[idx100]}, G=${pixels[idx100+1]}, B=${pixels[idx100+2]}, A=${pixels[idx100+3]}`);
-      console.log(`  px[200,200]: R=${pixels[idx200]}, G=${pixels[idx200+1]}, B=${pixels[idx200+2]}, A=${pixels[idx200+3]}`);
-    }
+    // Create temp canvas for the unscaled image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = SCREEN_WIDTH;
+    tempCanvas.height = SCREEN_HEIGHT;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.putImageData(this.imageData, 0, 0);
 
-    // Put imageData directly to canvas context
-    this.ctx.putImageData(this.imageData, 0, 0);
-
-    // Scale up if needed
-    if (this.scale > 1)
-    {
-      // Create temp canvas for scaling
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = SCREEN_WIDTH;
-      tempCanvas.height = SCREEN_HEIGHT;
-      const tempCtx = tempCanvas.getContext('2d')!;
-      tempCtx.putImageData(this.imageData, 0, 0);
-
-      // Clear and draw scaled
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.drawImage(
-        tempCanvas,
-        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
-        0, 0, this.canvas.width, this.canvas.height
-      );
-    }
+    // Draw to main canvas (scaled if needed)
+    this.ctx.drawImage(
+      tempCanvas,
+      0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
+      0, 0, this.canvas.width, this.canvas.height
+    );
 
     // Update FPS
     this.updateFps();
