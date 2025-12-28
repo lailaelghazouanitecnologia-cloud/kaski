@@ -9,3 +9,5 @@ export * from './ModuleManager';
 export * from './SyncManager';
 export * from './DisplayManager';
 export * from './InputManager';
+export * from './GpuManager';
+export * from './AudioManager';

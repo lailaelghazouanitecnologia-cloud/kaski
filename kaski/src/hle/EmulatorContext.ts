@@ -14,6 +14,8 @@ import { ModuleManager } from './manager/ModuleManager';
 import { SyncManager } from './manager/SyncManager';
 import { DisplayManager } from './manager/DisplayManager';
 import { InputManager } from './manager/InputManager';
+import { GpuManager } from './manager/GpuManager';
+import { AudioManager } from './manager/AudioManager';
 import { FileManager } from './vfs/FileManager';
 
 /**
@@ -48,6 +50,12 @@ export class EmulatorContext
   /** Input manager */
   readonly inputManager: InputManager;
 
+  /** GPU manager */
+  readonly gpuManager: GpuManager;
+
+  /** Audio manager */
+  readonly audioManager: AudioManager;
+
   /** File manager */
   readonly fileManager: FileManager;
 
@@ -64,6 +72,8 @@ export class EmulatorContext
     this.syncManager = new SyncManager();
     this.displayManager = new DisplayManager();
     this.inputManager = new InputManager();
+    this.gpuManager = new GpuManager();
+    this.audioManager = new AudioManager();
     this.fileManager = new FileManager();
 
     // Set context on module manager
@@ -84,6 +94,8 @@ export class EmulatorContext
     this.syncManager.reset();
     this.displayManager.reset();
     this.inputManager.reset();
+    this.gpuManager.reset();
+    this.audioManager.reset();
     this.fileManager.reset();
   }
 
