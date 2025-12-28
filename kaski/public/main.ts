@@ -184,13 +184,29 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
   registerAllModules(ctx);
 
   // Wire up syscall handling
-  cpu.setSyscallHandler((cpuState, code) =>
+  cpu.setSyscallHandler((cpuRef, code) =>
   {
     const func = ctx!.moduleManager.getFunction(code);
     if (func)
     {
       syscallCount++;
-      // For now just skip syscalls
+      try
+      {
+        const result = func.handler(ctx!);
+        if (result !== undefined && typeof result === 'number')
+        {
+          // Set return value in v0 directly on CPU state
+          cpuRef.state.gpr[2] = result | 0;
+        }
+      }
+      catch (e)
+      {
+        log(`Syscall error (${func.name}): ${e}`);
+      }
+    }
+    else
+    {
+      log(`Unknown syscall: 0x${code.toString(16)}`);
     }
   });
 
@@ -236,10 +252,53 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
     log(`Applied ${elf.relocations.length} relocations`);
   }
 
+  // Parse imports and patch stubs
+  if (elf.moduleInfo)
+  {
+    log(`Module: ${elf.moduleInfo.name}`);
+    log(`Imports: 0x${elf.moduleInfo.importsStart.toString(16)} - 0x${elf.moduleInfo.importsEnd.toString(16)}`);
+
+    // Parse import table
+    const imports = elf.parseImports(memory, baseAddress);
+    log(`Found ${imports.length} import modules`);
+
+    for (const imp of imports)
+    {
+      log(`  - ${imp.moduleName}: ${imp.funcCount} functions`);
+    }
+
+    // Patch import stubs with syscall instructions
+    const patchCount = elf.patchImportStubs(
+      memory,
+      (nid, moduleName) =>
+      {
+        const syscall = ctx!.moduleManager.getSyscallForNid(nid, moduleName);
+        if (syscall === undefined)
+        {
+          log(`  Missing: ${moduleName}::0x${nid.toString(16)}`);
+        }
+        return syscall;
+      }
+    );
+
+    log(`Patched ${patchCount} import stubs`);
+  }
+
   // Set up CPU
   cpu.setEntryPoint(entryPoint);
   cpu.state.gpr[29] = 0x09FFF000; // Stack pointer
   cpu.state.gpr[31] = 0; // Return address
+
+  // Create a main thread so HLE modules can access CPU state
+  const mainThread = {
+    uid: 1,
+    name: 'main',
+    cpu: cpu.state,
+    status: 1, // RUNNING
+    callbackAccepting: false,
+  };
+  // @ts-expect-error - simplified thread for browser
+  ctx.threadManager.setCurrentThread(mainThread);
 
   // Create platform
   platform = new Html5Platform(memory, { canvas, display: { scale: 2 } });

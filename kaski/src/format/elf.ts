@@ -272,6 +272,35 @@ export interface PspModuleInfo
   importsEnd: number;
 }
 
+/**
+ * PSP Import Entry
+ */
+export interface PspImportEntry
+{
+  /** Module name */
+  moduleName: string;
+  /** Module name address */
+  nameAddr: number;
+  /** Version */
+  version: number;
+  /** Attributes */
+  attr: number;
+  /** Number of functions */
+  funcCount: number;
+  /** Number of variables */
+  varCount: number;
+  /** NID table address */
+  nidData: number;
+  /** Stub table address */
+  funcData: number;
+  /** Variable import address */
+  varData: number;
+  /** NIDs to import */
+  nids: number[];
+  /** Stub addresses */
+  stubAddrs: number[];
+}
+
 // ============================================
 // ELF Loader
 // ============================================
@@ -287,6 +316,7 @@ export class ElfFile
   readonly symbols: ElfSymbol[];
   readonly relocations: RelocationEntry[];
   readonly moduleInfo?: PspModuleInfo;
+  readonly imports: PspImportEntry[] = [];
 
   private stream: Stream;
   private sectionsByName: Map<string, SectionHeader>;
@@ -327,6 +357,9 @@ export class ElfFile
     {
       this.moduleInfo = this.parseModuleInfo();
     }
+
+    // Note: imports are parsed after loading into memory
+    // because we need to read NID/stub addresses from loaded memory
   }
 
   /**
@@ -717,5 +750,123 @@ export class ElfFile
         // Add more relocation types as needed
       }
     }
+  }
+
+  /**
+   * Parse import table from loaded memory
+   *
+   * Must be called after loadIntoMemory() and applyRelocations()
+   */
+  parseImports(
+    memory: {
+      lw: (addr: number) => number;
+      lbu: (addr: number) => number;
+      readString: (addr: number, maxLen?: number) => string;
+    },
+    baseAddress: number = 0
+  ): PspImportEntry[]
+  {
+    if (!this.moduleInfo)
+    {
+      return [];
+    }
+
+    const imports: PspImportEntry[] = [];
+    const importsStart = this.moduleInfo.importsStart + baseAddress;
+    const importsEnd = this.moduleInfo.importsEnd + baseAddress;
+
+    // Each import entry is 20 bytes (old format) or 28 bytes (new format)
+    // We use old format: name(4) + version(2) + attr(2) + funcCount(1) + varCount(1) + pad(2) + nidData(4) + funcData(4)
+    const IMPORT_ENTRY_SIZE = 20;
+
+    let offset = importsStart;
+    while (offset + IMPORT_ENTRY_SIZE <= importsEnd)
+    {
+      const nameAddr = memory.lw(offset) >>> 0;
+      const version = memory.lw(offset + 4) & 0xFFFF;
+      const attr = (memory.lw(offset + 4) >> 16) & 0xFFFF;
+      const funcCount = memory.lbu(offset + 8);
+      const varCount = memory.lbu(offset + 9);
+      const nidData = memory.lw(offset + 12) >>> 0;
+      const funcData = memory.lw(offset + 16) >>> 0;
+
+      // Read module name
+      const moduleName = nameAddr ? memory.readString(nameAddr, 64) : '';
+
+      // Read NIDs and stub addresses
+      const nids: number[] = [];
+      const stubAddrs: number[] = [];
+
+      for (let i = 0; i < funcCount; i++)
+      {
+        nids.push(memory.lw(nidData + i * 4) >>> 0);
+        stubAddrs.push(funcData + i * 8); // Each stub is 8 bytes (2 instructions)
+      }
+
+      imports.push({
+        moduleName,
+        nameAddr,
+        version,
+        attr,
+        funcCount,
+        varCount,
+        nidData,
+        funcData,
+        varData: 0, // Not used in old format
+        nids,
+        stubAddrs,
+      });
+
+      offset += IMPORT_ENTRY_SIZE;
+    }
+
+    // Store imports
+    (this.imports as PspImportEntry[]).push(...imports);
+
+    return imports;
+  }
+
+  /**
+   * Patch import stubs with syscall instructions
+   *
+   * @param memory Memory interface
+   * @param nidToSyscall Function that maps NID to syscall number
+   * @returns Number of patched stubs
+   */
+  patchImportStubs(
+    memory: {
+      lw: (addr: number) => number;
+      sw: (addr: number, value: number) => void;
+    },
+    nidToSyscall: (nid: number, moduleName: string) => number | undefined
+  ): number
+  {
+    let patchCount = 0;
+
+    for (const imp of this.imports)
+    {
+      for (let i = 0; i < imp.nids.length; i++)
+      {
+        const nid = imp.nids[i];
+        const stubAddr = imp.stubAddrs[i];
+        const syscallNum = nidToSyscall(nid, imp.moduleName);
+
+        if (syscallNum !== undefined)
+        {
+          // PSP import stub format:
+          // Instruction 0: jr $ra (0x03E00008)
+          // Instruction 1: syscall <num> (0x0000000C | (num << 6))
+
+          // Write jr $ra
+          memory.sw(stubAddr, 0x03E00008);
+          // Write syscall with the NID as the code
+          // The syscall code is in bits 25-6 (20 bits)
+          memory.sw(stubAddr + 4, 0x0000000C | (syscallNum << 6));
+          patchCount++;
+        }
+      }
+    }
+
+    return patchCount;
   }
 }

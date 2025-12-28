@@ -293,4 +293,27 @@ export class ModuleManager
   {
     return this.modules.size;
   }
+
+  /**
+   * Get syscall number for a NID
+   *
+   * In our implementation, the syscall number IS the NID.
+   * This simplifies the mapping - each NID maps directly to its handler.
+   */
+  getSyscallForNid(nid: number, _moduleName?: string): number | undefined
+  {
+    if (this.functionsByNid.has(nid))
+    {
+      return nid;
+    }
+    return undefined;
+  }
+
+  /**
+   * Get all registered NIDs
+   */
+  getRegisteredNids(): number[]
+  {
+    return [...this.functionsByNid.keys()];
+  }
 }
