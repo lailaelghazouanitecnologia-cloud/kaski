@@ -39,6 +39,41 @@ let running = false;
 let instructionCount = 0;
 let syscallCount = 0;
 
+// VRAM constants
+const VRAM_BASE = 0x04000000;
+const SCREEN_WIDTH = 480;
+const SCREEN_HEIGHT = 272;
+const BUFFER_WIDTH = 512;
+
+/**
+ * Write a test pattern to VRAM
+ */
+function writeTestPattern(memory: Memory): void
+{
+  log('Writing test pattern to VRAM...');
+
+  for (let y = 0; y < SCREEN_HEIGHT; y++)
+  {
+    for (let x = 0; x < SCREEN_WIDTH; x++)
+    {
+      const offset = (y * BUFFER_WIDTH + x) * 4;
+      const addr = VRAM_BASE + offset;
+
+      // Create a colorful gradient pattern
+      const r = (x * 255 / SCREEN_WIDTH) | 0;
+      const g = (y * 255 / SCREEN_HEIGHT) | 0;
+      const b = ((x + y) * 127 / (SCREEN_WIDTH + SCREEN_HEIGHT)) | 0;
+      const a = 255;
+
+      // RGBA8888 format (little endian: ABGR in memory)
+      const pixel = (a << 24) | (b << 16) | (g << 8) | r;
+      memory.sw(addr, pixel);
+    }
+  }
+
+  log('Test pattern written');
+}
+
 // ============================================
 // Logging
 // ============================================
@@ -158,7 +193,24 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
   platform = new Html5Platform(memory, { canvas, display: { scale: 2 } });
   await platform.init();
 
-  log('ROM loaded successfully');
+  // Write test pattern to VRAM (0x04000000)
+  writeTestPattern(memory);
+
+  // Set framebuffer to VRAM
+  platform.display.setFrameBuf(0x04000000, 512, 0, 0); // RGBA8888, immediate sync
+
+  // Debug: Check framebuffer setup
+  const fb = platform.display.getFrameBuf();
+  log(`Framebuffer: addr=0x${fb.address.toString(16)}, width=${fb.bufferWidth}, format=${fb.pixelFormat}`);
+
+  // Debug: Check first pixel in VRAM
+  const firstPixel = memory.lwu(VRAM_BASE);
+  log(`First VRAM pixel: 0x${firstPixel.toString(16)}`);
+
+  // Render test pattern immediately
+  platform.html5Display.render();
+
+  log('ROM loaded successfully - test pattern should be visible');
 
   // Enable buttons
   startBtn.disabled = false;
