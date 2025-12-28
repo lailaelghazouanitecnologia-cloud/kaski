@@ -16,7 +16,7 @@ import { ThreadManager } from '../hle/manager/ThreadManager';
 import { ModuleManager } from '../hle/manager/ModuleManager';
 import { CallbackManager } from '../hle/manager/CallbackManager';
 import { MemoryManager } from '../hle/manager/MemoryManager';
-import { FileManager } from '../hle/manager/FileManager';
+import { FileManager } from '../hle/vfs/FileManager';
 import { SyscallManager } from '../hle/manager/SyscallManager';
 import { MountableVfs } from '../hle/vfs/MountableVfs';
 import { ProgramLoader } from '../hle/ProgramLoader';
@@ -273,10 +273,10 @@ export class Psp
     this.battery = new DefaultBattery();
 
     // Initialize HLE managers
-    this.memoryManager = new MemoryManager(this.memory);
+    this.memoryManager = new MemoryManager();
     this.callbackManager = new CallbackManager();
-    this.syscallManager = new SyscallManager(this.memory);
-    this.threadManager = new ThreadManager(this.memory, this.callbackManager, this.syscallManager);
+    this.syscallManager = new SyscallManager();
+    this.threadManager = new ThreadManager(this.memoryManager);
     this.moduleManager = new ModuleManager();
     this.fileManager = new FileManager();
 

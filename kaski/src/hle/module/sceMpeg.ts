@@ -128,7 +128,7 @@ export class sceMpeg
 
     // Write magic
     const handleAddr = dataPtr + 0x30;
-    const magic = 'LIBMPEG\0001\0';
+    const magic = 'LIBMPEG\x001\x00';
     for (let i = 0; i < magic.length; i++)
     {
       this.ctx.write8(handleAddr + i, magic.charCodeAt(i));
