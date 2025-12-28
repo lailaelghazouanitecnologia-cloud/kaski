@@ -184,9 +184,10 @@ async function loadRom(data: ArrayBuffer, filename: string): Promise<void>
   registerAllModules(ctx);
 
   // Wire up syscall handling
+  // Note: code is the sequential syscall number assigned during stub patching
   cpu.setSyscallHandler((cpuRef, code) =>
   {
-    const func = ctx!.moduleManager.getFunction(code);
+    const func = ctx!.moduleManager.getFunctionBySyscall(code);
     if (func)
     {
       syscallCount++;
@@ -516,24 +517,26 @@ document.body.addEventListener('drop', async (e) =>
 });
 
 // ============================================
-// Auto-load cube.elf
+// Auto-load cubevfpu.prx (PRX with syscalls)
 // ============================================
 
 async function autoLoadCube(): Promise<void>
 {
   try
   {
-    log('Attempting to load cube.elf...');
-    const response = await fetch('/data/samples/cube.elf');
+    // Use cubevfpu.prx instead of cube.elf because it uses proper syscalls
+    // cube.elf is a bare-metal demo that accesses hardware directly
+    log('Attempting to load cubevfpu.prx...');
+    const response = await fetch('/data/samples/cubevfpu.prx');
 
     if (!response.ok)
     {
-      log('cube.elf not found, drag and drop a ROM to load');
+      log('cubevfpu.prx not found, drag and drop a ROM to load');
       return;
     }
 
     const data = await response.arrayBuffer();
-    await loadRom(data, 'cube.elf');
+    await loadRom(data, 'cubevfpu.prx');
   }
   catch (error)
   {

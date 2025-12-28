@@ -113,6 +113,15 @@ export class ModuleManager
   /** Functions by name */
   private functionsByName: Map<string, FunctionInfo> = new Map();
 
+  /** Functions by syscall number (for runtime lookup) */
+  private functionsBySyscall: Map<number, FunctionInfo> = new Map();
+
+  /** NID to syscall number mapping (assigned during stub patching) */
+  private nidToSyscallNum: Map<number, number> = new Map();
+
+  /** Next syscall number to assign (max 20-bit = 0xFFFFF) */
+  private nextSyscallNum: number = 1;
+
   /** Module instances */
   private modules: Map<string, HleModule> = new Map();
 
@@ -297,16 +306,37 @@ export class ModuleManager
   /**
    * Get syscall number for a NID
    *
-   * In our implementation, the syscall number IS the NID.
-   * This simplifies the mapping - each NID maps directly to its handler.
+   * Assigns a sequential syscall number (fits in 20 bits) and creates
+   * a mapping for runtime lookup. The syscall number is used in the
+   * patched import stubs.
    */
   getSyscallForNid(nid: number, _moduleName?: string): number | undefined
   {
-    if (this.functionsByNid.has(nid))
+    const func = this.functionsByNid.get(nid);
+    if (!func)
     {
-      return nid;
+      return undefined;
     }
-    return undefined;
+
+    // Check if we already assigned a syscall number
+    let syscallNum = this.nidToSyscallNum.get(nid);
+    if (syscallNum === undefined)
+    {
+      // Assign a new syscall number
+      syscallNum = this.nextSyscallNum++;
+      this.nidToSyscallNum.set(nid, syscallNum);
+      this.functionsBySyscall.set(syscallNum, func);
+    }
+
+    return syscallNum;
+  }
+
+  /**
+   * Get function by syscall number (used at runtime)
+   */
+  getFunctionBySyscall(syscallNum: number): FunctionInfo | undefined
+  {
+    return this.functionsBySyscall.get(syscallNum);
   }
 
   /**
