@@ -20,3 +20,4 @@ export * from './pbp';
 export * from './zlib';
 export * from './prxDecrypt';
 export * from './prxKeys';
+export * from './vag';
