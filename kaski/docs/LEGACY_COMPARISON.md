@@ -11,11 +11,11 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | CPU JIT | Basic | Advanced | 150% | Relooper, cache added |
 | GPU Core | WebGL | WebGPU | New | Different backend |
 | Memory | Abstract | Concrete | 100% | Better typed |
-| KIRK Crypto | 3 files | 3 files | 100% | Keys extracted |
+| KIRK Crypto | 3 files | 4 files | 100% | Keys extracted, index added |
 | HLE Managers | 8 | 10+ | 125% | New managers added |
 | HLE Modules | 50+ | 50+ | 95% | Some stubs |
-| VFS | 8 files | 5 files | 80% | Consolidated |
-| Format Parsers | 11 files | 7 files | 70% | Some removed |
+| VFS | 8 files | 6 files | 95% | ISO VFS added |
+| Format Parsers | 11 files | 9 files | 90% | CSO, ZLIB added |
 
 ## Detailed Component Status
 
@@ -154,7 +154,7 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | Base VFS | vfs.ts | types.ts | OK |
 | Mountable | vfs_mountable.ts | MountableVfs.ts | OK |
 | Memory | vfs_memory.ts | MemoryVfs.ts | OK |
-| ISO | vfs_iso.ts | Removed | TODO |
+| ISO | vfs_iso.ts | IsoVfs.ts | OK |
 | Dropbox | vfs_dropbox.ts | Removed | N/A |
 | URI | vfs_uri.ts | Removed | TODO |
 | ZIP | vfs_zip.ts | Removed | TODO |
@@ -168,20 +168,20 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | PBP | pbp.ts | pbp.ts | OK |
 | PSF | psf.ts | psf.ts | OK |
 | ISO | iso.ts | iso.ts | OK |
-| CSO | cso.ts | Removed | TODO |
+| CSO | cso.ts | cso.ts | OK |
+| ZLIB | zlib.ts | zlib.ts | OK |
 | RIFF | riff.ts | Removed | N/A |
 | VAG | vag.ts | Removed | N/A |
 | ZIP | zip.ts | Removed | TODO |
-| ZLIB | zlib.ts | Removed | TODO |
 | DWARF | elf_dwarf.ts | Removed | N/A |
 
 ## Missing Features in Kaski
 
 ### High Priority
 
-1. **CSO Support** - Compressed ISO format used by many game backups
-2. **ZIP/ZLIB** - Needed for some game assets
-3. **ISO VFS** - Mounting ISO files as filesystem
+1. ~~**CSO Support**~~ - Implemented
+2. ~~**ZLIB**~~ - Implemented
+3. ~~**ISO VFS**~~ - Implemented
 4. **Encrypted PRX Loading** - elf_crypted_prx.ts functionality
 
 ### Medium Priority
@@ -228,10 +228,10 @@ This document tracks the comparison between the legacy PSP emulator implementati
 
 ### Short Term
 
-- [ ] Add ZIP/ZLIB support
+- [x] Add ZLIB support
 - [ ] Implement encrypted PRX loading
 - [ ] Add VAG audio decoder
-- [ ] Complete VFS implementations
+- [ ] Complete remaining VFS implementations
 
 ### Long Term
 
@@ -247,3 +247,9 @@ This document tracks the comparison between the legacy PSP emulator implementati
 - KIRK crypto engine implemented (CMD1, CMD7)
 - 37 KIRK tests passing
 - Cube integration test pipeline created
+- ISO VFS implemented for mounting disc images
+- 27 ISO VFS tests passing
+- CSO compressed ISO support added
+- ZLIB raw DEFLATE decompression added
+- 16 CSO/ZLIB tests passing
+- Total: 758 tests across 26 files
