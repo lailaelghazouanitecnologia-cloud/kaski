@@ -34,10 +34,12 @@ export class sceNetAdhoc {
 		return 0;
 	}
 
-	/** */
+	/** Poll sockets for events */
 	@nativeFunction(0x7A662D6B, 150)
-    @I32 sceNetAdhocPollSocket(@I32 socketAddress: number, @I32 int: number, @I32 timeout: number, @I32 nonblock: number) {
-		throw new Error("Not implemented sceNetAdhocPollSocket");
+    @I32 sceNetAdhocPollSocket(@I32 socketAddress: number, @I32 count: number, @I32 timeout: number, @I32 nonblock: number) {
+		// Stub implementation - returns 0 (no events)
+		// A full implementation would check socket states and return event count
+		return 0;
 	}
 
 	private pdps = new UidCollection<Pdp>(1);
@@ -115,94 +117,121 @@ export class sceNetAdhoc {
 		return 0;
 	}
 
+	// GameMode stubs - returns 1 as dummy ID/success
+	private gameModeId = 1;
+
 	/** Create own game object type data. */
 	@nativeFunction(0x7F75C338, 150)
     @I32 sceNetAdhocGameModeCreateMaster(@BYTES data: Stream) {
-		throw (new Error("Not implemented sceNetAdhocGameModeCreateMaster"));
+		// Stub: return dummy ID
+		return this.gameModeId++;
 	}
 
 	/** Create peer game object type data. */
 	@nativeFunction(0x3278AB0C, 150)
     @I32 sceNetAdhocGameModeCreateReplica(@FBYTES(6) mac: Uint8Array, @BYTES data: Stream) {
-		throw (new Error("Not implemented sceNetAdhocGameModeCreateReplica"));
+		// Stub: return dummy ID
+		return this.gameModeId++;
 	}
 
 	/** Update own game object type data. */
 	@nativeFunction(0x98C204C8, 150)
     @I32 sceNetAdhocGameModeUpdateMaster() {
-		throw (new Error("Not implemented sceNetAdhocGameModeUpdateMaster"));
+		// Stub: success
+		return 0;
 	}
 
 	/** Update peer game object type data. */
 	@nativeFunction(0xFA324B4E, 150)
     @I32 sceNetAdhocGameModeUpdateReplica(@I32 id: number, @I32 unk1: number) {
-		throw (new Error("Not implemented sceNetAdhocGameModeUpdateReplica"));
+		// Stub: success
+		return 0;
 	}
 
 	/** Delete own game object type data. */
 	@nativeFunction(0xA0229362, 150)
     @I32 sceNetAdhocGameModeDeleteMaster() {
-		throw (new Error("Not implemented sceNetAdhocGameModeDeleteMaster"));
+		// Stub: success
+		return 0;
 	}
 
 	/** Delete peer game object type data. */
 	@nativeFunction(0x0B2228E9, 150)
     @I32 sceNetAdhocGameModeDeleteReplica(@I32 id: number) {
-		throw (new Error("Not implemented sceNetAdhocGameModeDeleteReplica"));
+		// Stub: success
+		return 0;
 	}
+
+	// PTP (Peer To Peer) stubs
+	private ptpId = 1;
 
 	/** Open a PTP (Peer To Peer) connection */
 	@nativeFunction(0x877F6D66, 150)
     @I32 sceNetAdhocPtpOpen(@FBYTES(6) srcmac: Uint8Array, @I32 srcport: number, @PTR destmac: Stream, @I32 destport: number, @I32 bufsize: number, @I32 delay: number, @I32 count: number, @I32 unk1: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpOpen"));
+		// Stub: return dummy PTP ID
+		return this.ptpId++;
 	}
 
 	/** Wait for an incoming PTP connection */
 	@nativeFunction(0xE08BDAC1, 150)
     @I32 sceNetAdhocPtpListen(@FBYTES(6) srcmac: Uint8Array, @I32 srcport: number, @I32 bufsize: number, @I32 delay: number, @I32 count: number, @I32 queue: number, @I32 unk1: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpListen"));
+		// Stub: return dummy PTP ID
+		return this.ptpId++;
 	}
 
 	/** Wait for connection created by sceNetAdhocPtpOpen */
 	@nativeFunction(0xFC6FC07B, 150)
     @I32 sceNetAdhocPtpConnect(@I32 id: number, @I32 timeout: number, @I32 nonblock: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpConnect"));
+		// Stub: success (connection established)
+		return 0;
 	}
 
 	/** Accept an incoming PTP connection */
 	@nativeFunction(0x9DF81198, 150)
-    @I32 sceNetAdhocPtpAccept(@I32 id: number, @PTR data: Stream, @PTR datasize: Stream, @I32 timeout: number, @I32 nonblock: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpAccept"));
+    @I32 sceNetAdhocPtpAccept(@I32 id: number, @PTR mac: Stream, @PTR portPtr: Stream, @I32 timeout: number, @I32 nonblock: number) {
+		// Stub: return new connection ID
+		return this.ptpId++;
 	}
 
 	/** Send data */
 	@nativeFunction(0x4DA4C788, 150)
     @I32 sceNetAdhocPtpSend(@I32 id: number, @PTR data: Stream, @PTR datasize: Stream, @I32 timeout: number, @I32 nonblock: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpSend"));
+		// Stub: pretend all data was sent
+		return 0;
 	}
-	
+
 	/** Receive data */
 	@nativeFunction(0x8BEA2B3E, 150)
     @I32 sceNetAdhocPtpRecv(@I32 id: number, @PTR data: Stream, @PTR datasize: Stream, @I32 timeout: number, @I32 nonblock: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpRecv"));
+		// Stub: no data available (would block or return immediately)
+		if (nonblock) {
+			return 0x80410709; // ERROR_NET_ADHOC_NO_DATA_AVAILABLE
+		}
+		// For blocking, just return 0 (no data)
+		datasize.writeInt32(0);
+		return 0;
 	}
 
 	/** Wait for data in the buffer to be sent */
 	@nativeFunction(0x9AC2EEAC, 150)
     @I32 sceNetAdhocPtpFlush(@I32 id: number, @I32 timeout: number, @I32 nonblock: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpFlush"));
+		// Stub: all data flushed
+		return 0;
 	}
 
 	/** Close a socket */
 	@nativeFunction(0x157E6225, 150)
     @I32 sceNetAdhocPtpClose(@I32 id: number, @I32 unk1: number) {
-		throw (new Error("Not implemented sceNetAdhocPtpClose"));
+		// Stub: success
+		return 0;
 	}
 
 	/** Get the status of all PTP objects */
 	@nativeFunction(0xB9685118, 150)
-    @I32 sceNetAdhocGetPtpStat(@PTR size: Stream, @PTR stat: Stream) {
-		throw (new Error("Not implemented sceNetAdhocGetPtpStat"));
+    @I32 sceNetAdhocGetPtpStat(@PTR sizePtr: Stream, @PTR stat: Stream) {
+		// Stub: no PTP connections, write 0 size
+		sizePtr.writeInt32(0);
+		return 0;
 	}
 }
 

@@ -1,6 +1,6 @@
 ﻿import "../emu/global"
 
-import {NumberDictionary, Signal0} from "../global/utils";
+import {CpuBreakException, NumberDictionary, Signal0} from "../global/utils";
 import {CpuSpecialAddresses, CpuState} from "./cpu/cpu_core";
 import {CpuExecutor} from "./cpu/cpu_executor";
 
@@ -71,30 +71,39 @@ export class InterruptManager {
 		}
 	}
 
+	/**
+	 * Execute pending interrupt handlers
+	 *
+	 * Note: When CpuBreakException is thrown, it means a Promise was yielded
+	 * and execution should pause. Following the pattern in ThreadManager,
+	 * we catch this exception and return, allowing the promise to resolve
+	 * before continuing execution.
+	 */
 	execute(_state: CpuState | null) {
 		while (this.queue.length > 0) {
 			const item = this.queue.shift()!
 			const state = (item.cpuState ?? _state)!
-			state.preserveRegisters(() => {
-				state.RA = CpuSpecialAddresses.EXIT_INTERRUPT;
-				state.setGPR(4, item.no);
-				state.setGPR(5, item.argument);
-				state.insideInterrupt = true;
-				state.setPC(item.address);
-				state.startThreadStep();
-                CpuExecutor.executeAtPC(state)
-				//let RA = state.RA;
-				//// @FIXME! @TODO: this is probably wrong, since the CpuBreakException means that a promise was yielded and we should not continue until it has been resolved!!!
-				//while (state.PC != RA) {
-				//	try {
-				//		state.executeAtPC();
-				//	} catch (e) {
-				//		if (!CpuBreakException.is(e)) throw e;
-				//	}
-				//}
-			});
+
+			try {
+				state.preserveRegisters(() => {
+					state.RA = CpuSpecialAddresses.EXIT_INTERRUPT;
+					state.setGPR(4, item.no);
+					state.setGPR(5, item.argument);
+					state.insideInterrupt = true;
+					state.setPC(item.address);
+					state.startThreadStep();
+					CpuExecutor.executeAtPC(state);
+				});
+			} catch (e) {
+				// CpuBreakException indicates a Promise was yielded
+				// Return to allow the promise to resolve before continuing
+				// This follows the same pattern as ThreadManager.eventOcurredCallback
+				if (CpuBreakException.is(e)) {
+					return;
+				}
+				throw e;
+			}
 		}
-		//state.callPCSafe();
 	}
 }
 
