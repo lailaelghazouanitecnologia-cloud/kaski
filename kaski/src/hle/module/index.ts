@@ -18,3 +18,8 @@ export * from './LoadExecForUser';
 export * from './Kernel_Library';
 export * from './sceUtility';
 export * from './sceAtrac3plus';
+export * from './ModuleMgrForUser';
+export * from './StdioForUser';
+export * from './sceUmdUser';
+export * from './sceDmac';
+export * from './sceHprm';
