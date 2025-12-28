@@ -29,10 +29,13 @@ export class Interpreter {
   private table: InstructionTable;
   private handlers: Map<string, (cpu: CpuState, instr: Instruction) => ExecutionResult>;
 
-  constructor() {
+  constructor()
+  {
     this.table = InstructionTable.instance;
     this.handlers = new Map();
     this.registerHandlers();
+    this.registerVfpuHandlers();
+    this.registerExtendedHandlers();
   }
 
   /**
@@ -780,7 +783,8 @@ export class Interpreter {
   /**
    * Execute branch with delay slot
    */
-  private executeBranch(cpu: CpuState, target: number): ExecutionResult {
+  private executeBranch(cpu: CpuState, target: number): ExecutionResult
+  {
     // Execute delay slot
     const delaySlotPc = (cpu.pc + 4) >>> 0;
     const delayInstr = Instruction.fromMemory(cpu.memory, delaySlotPc);
@@ -789,5 +793,460 @@ export class Interpreter {
     // Jump to target
     cpu.pc = target;
     return ExecutionResult.BRANCH;
+  }
+
+  /**
+   * Register VFPU instruction handlers
+   */
+  private registerVfpuHandlers(): void
+  {
+    // ============================================
+    // VFPU Arithmetic
+    // ============================================
+
+    this.handlers.set('vadd', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = vs[j] + vt[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vsub', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = vs[j] - vt[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vmul', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = vs[j] * vt[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vdiv', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = vs[j] / vt[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Unary Operations
+    // ============================================
+
+    this.handlers.set('vmov', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      cpu.writeVector(i.vd, size, vs);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vabs', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.abs(vs[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vneg', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = -vs[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vsqrt', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.sqrt(vs[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vrcp', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = 1.0 / vs[j];
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vrsq', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = 1.0 / Math.sqrt(vs[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vsin', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        // VFPU uses cycles (0-1 = 0-2π)
+        result[j] = Math.sin(vs[j] * Math.PI * 2);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vcos', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.cos(vs[j] * Math.PI * 2);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vexp2', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.pow(2, vs[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vlog2', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.log2(vs[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Saturation
+    // ============================================
+
+    this.handlers.set('vsat0', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.max(0, Math.min(1, vs[j]));
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vsat1', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.max(-1, Math.min(1, vs[j]));
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Constants
+    // ============================================
+
+    this.handlers.set('vzero', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const result = new Float32Array(size);
+      result.fill(0);
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vone', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const result = new Float32Array(size);
+      result.fill(1);
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Min/Max
+    // ============================================
+
+    this.handlers.set('vmin', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.min(vs[j], vt[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('vmax', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = Math.max(vs[j], vt[j]);
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Dot Product
+    // ============================================
+
+    this.handlers.set('vdot', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const vt = cpu.readVector(i.vt, size);
+
+      let dot = 0;
+      for (let j = 0; j < size; j++)
+      {
+        dot += vs[j] * vt[j];
+      }
+
+      // Write scalar result
+      cpu.writeVector(i.vd, 1, [dot]);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Scale
+    // ============================================
+
+    this.handlers.set('vscl', (cpu, i) =>
+    {
+      const size = i.oneTwoSize;
+      const vs = cpu.readVector(i.vs, size);
+      const scale = cpu.readVector(i.vt, 1)[0];
+      const result = new Float32Array(size);
+
+      for (let j = 0; j < size; j++)
+      {
+        result[j] = vs[j] * scale;
+      }
+
+      cpu.writeVector(i.vd, size, result);
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // VFPU Move to/from GPR
+    // ============================================
+
+    this.handlers.set('mfv', (cpu, i) =>
+    {
+      const regs = cpu.getVectorRegs(i.vs, 1);
+      const floatView = new Float32Array(1);
+      const intView = new Int32Array(floatView.buffer);
+
+      floatView[0] = cpu.vfpr[regs[0]];
+      cpu.setGpr(i.rt, intView[0]);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('mtv', (cpu, i) =>
+    {
+      const regs = cpu.getVectorRegs(i.vd, 1);
+      const intView = new Int32Array(1);
+      const floatView = new Float32Array(intView.buffer);
+
+      intView[0] = cpu.getGpr(i.rt);
+      cpu.vfpr[regs[0]] = floatView[0];
+      return ExecutionResult.CONTINUE;
+    });
+  }
+
+  /**
+   * Register multiply-accumulate and COP0 handlers
+   */
+  private registerExtendedHandlers(): void
+  {
+    // ============================================
+    // Multiply-Accumulate
+    // ============================================
+
+    this.handlers.set('madd', (cpu, i) =>
+    {
+      const rs = cpu.getGpr(i.rs);
+      const rt = cpu.getGpr(i.rt);
+      const hilo = (BigInt(cpu.hi) << 32n) | BigInt(cpu.lo >>> 0);
+      const result = hilo + BigInt(rs) * BigInt(rt);
+
+      cpu.lo = Number(result & 0xFFFFFFFFn) | 0;
+      cpu.hi = Number((result >> 32n) & 0xFFFFFFFFn) | 0;
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('maddu', (cpu, i) =>
+    {
+      const rs = BigInt(cpu.getGprU(i.rs));
+      const rt = BigInt(cpu.getGprU(i.rt));
+      const hilo = (BigInt(cpu.hi >>> 0) << 32n) | BigInt(cpu.lo >>> 0);
+      const result = hilo + rs * rt;
+
+      cpu.lo = Number(result & 0xFFFFFFFFn) | 0;
+      cpu.hi = Number((result >> 32n) & 0xFFFFFFFFn) | 0;
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('msub', (cpu, i) =>
+    {
+      const rs = cpu.getGpr(i.rs);
+      const rt = cpu.getGpr(i.rt);
+      const hilo = (BigInt(cpu.hi) << 32n) | BigInt(cpu.lo >>> 0);
+      const result = hilo - BigInt(rs) * BigInt(rt);
+
+      cpu.lo = Number(result & 0xFFFFFFFFn) | 0;
+      cpu.hi = Number((result >> 32n) & 0xFFFFFFFFn) | 0;
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('msubu', (cpu, i) =>
+    {
+      const rs = BigInt(cpu.getGprU(i.rs));
+      const rt = BigInt(cpu.getGprU(i.rt));
+      const hilo = (BigInt(cpu.hi >>> 0) << 32n) | BigInt(cpu.lo >>> 0);
+      const result = hilo - rs * rt;
+
+      cpu.lo = Number(result & 0xFFFFFFFFn) | 0;
+      cpu.hi = Number((result >> 32n) & 0xFFFFFFFFn) | 0;
+      return ExecutionResult.CONTINUE;
+    });
+
+    // ============================================
+    // COP0 Instructions
+    // ============================================
+
+    this.handlers.set('mfc0', (cpu, i) =>
+    {
+      cpu.setGpr(i.rt, cpu.cop0[i.c0dr]);
+      return ExecutionResult.CONTINUE;
+    });
+
+    this.handlers.set('mtc0', (cpu, i) =>
+    {
+      cpu.cop0[i.c0dr] = cpu.getGpr(i.rt);
+      return ExecutionResult.CONTINUE;
+    });
   }
 }

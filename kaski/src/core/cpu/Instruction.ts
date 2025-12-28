@@ -189,6 +189,10 @@ export class Instruction {
   /** Size for ins instruction */
   get sizeIns(): number { return this.msb - this.lsb + 1; }
 
+  /** COP0 destination register (bits 15-11) */
+  get c0dr(): number { return this.extract(11, 5); }
+  set c0dr(v: number) { this.insert(11, 5, v); }
+
   // ============================================
   // Address calculations
   // ============================================

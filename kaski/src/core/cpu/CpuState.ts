@@ -169,6 +169,13 @@ export class CpuState {
   /** Inside interrupt flag */
   insideInterrupt: boolean = false;
 
+  // ============================================
+  // COP0 Registers (System Control)
+  // ============================================
+
+  /** COP0 registers (32 registers) */
+  readonly cop0 = new Int32Array(32);
+
   constructor(memory: Memory) {
     this.id = CpuState.nextId++;
     this.memory = memory;
@@ -254,8 +261,79 @@ export class CpuState {
   /**
    * Get VFPU condition code bit
    */
-  getVfpuCc(index: number): boolean {
+  getVfpuCc(index: number): boolean
+  {
     return (this.vfprc[VfpuCtrl.CC] & (1 << index)) !== 0;
+  }
+
+  // ============================================
+  // VFPU Vector Access
+  // ============================================
+
+  /**
+   * Get VFPU register indices for a vector
+   *
+   * The 128 VFPU registers are organized as 8 matrices of 4x4.
+   * Vectors can be rows or columns within these matrices.
+   *
+   * @param vreg - Vector register number (7 bits)
+   * @param size - Vector size (1, 2, 3, or 4)
+   * @returns Array of scalar register indices
+   */
+  getVectorRegs(vreg: number, size: number): number[]
+  {
+    const matrix = (vreg >> 2) & 7;  // Bits 4-2: matrix number
+    const column = vreg & 3;          // Bits 1-0: column
+    const row = (vreg >> 5) & 3;      // Bits 6-5: row
+    const transpose = (vreg & 0x20) !== 0;  // Bit 5: transposed
+
+    const regs: number[] = [];
+    const base = matrix * 16;
+
+    for (let i = 0; i < size; i++)
+    {
+      if (transpose)
+      {
+        // Column vector
+        regs.push(base + ((row + i) & 3) * 4 + column);
+      }
+      else
+      {
+        // Row vector
+        regs.push(base + row * 4 + ((column + i) & 3));
+      }
+    }
+
+    return regs;
+  }
+
+  /**
+   * Read a VFPU vector as array of floats
+   */
+  readVector(vreg: number, size: number): Float32Array
+  {
+    const regs = this.getVectorRegs(vreg, size);
+    const result = new Float32Array(size);
+
+    for (let i = 0; i < size; i++)
+    {
+      result[i] = this.vfpr[regs[i]];
+    }
+
+    return result;
+  }
+
+  /**
+   * Write a VFPU vector from array of floats
+   */
+  writeVector(vreg: number, size: number, values: Float32Array | number[]): void
+  {
+    const regs = this.getVectorRegs(vreg, size);
+
+    for (let i = 0; i < size; i++)
+    {
+      this.vfpr[regs[i]] = values[i];
+    }
   }
 
   // ============================================
@@ -265,10 +343,12 @@ export class CpuState {
   /**
    * Reset CPU state to initial values
    */
-  reset(): void {
+  reset(): void
+  {
     this.gpr.fill(0);
     this.fpr.fill(0);
     this.vfpr.fill(NaN);
+    this.cop0.fill(0);
 
     this.pc = 0;
     this.npc = 0;
@@ -290,11 +370,13 @@ export class CpuState {
   /**
    * Copy all registers from another CpuState
    */
-  copyFrom(other: CpuState): void {
+  copyFrom(other: CpuState): void
+  {
     this.gpr.set(other.gpr);
     this.fpr.set(other.fpr);
     this.vfpr.set(other.vfpr);
     this.vfprc.set(other.vfprc);
+    this.cop0.set(other.cop0);
 
     this.pc = other.pc;
     this.npc = other.npc;
@@ -309,7 +391,8 @@ export class CpuState {
   /**
    * Clone this CPU state
    */
-  clone(): CpuState {
+  clone(): CpuState
+  {
     const newState = new CpuState(this.memory);
     newState.copyFrom(this);
     return newState;

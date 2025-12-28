@@ -256,5 +256,84 @@ export class InstructionTable {
     this.add('bc1t',  '010001:01000:00001:imm16', '%O', OFFSET16, BRANCH);
     this.add('bc1fl', '010001:01000:00010:imm16', '%O', OFFSET16, BRANCH | LIKELY);
     this.add('bc1tl', '010001:01000:00011:imm16', '%O', OFFSET16, BRANCH | LIKELY);
+
+    // ============================================
+    // VFPU Instructions (PSP)
+    // ============================================
+
+    // VFPU Arithmetic (vector)
+    this.add('vadd', '011000:000:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+    this.add('vsub', '011000:001:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+    this.add('vdiv', '011000:111:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+    this.add('vmul', '011001:000:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+
+    // VFPU Scalar operations
+    this.add('vabs',  '110100:00:000:00001:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vneg',  '110100:00:000:00010:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vsat0', '110100:00:000:00100:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vsat1', '110100:00:000:00101:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vrcp',  '110100:00:000:10000:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vrsq',  '110100:00:000:10001:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vsin',  '110100:00:000:10010:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vcos',  '110100:00:000:10011:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vexp2', '110100:00:000:10100:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vlog2', '110100:00:000:10101:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vsqrt', '110100:00:000:10110:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+
+    // VFPU Move
+    this.add('vmov',  '110100:00:000:00000:two:vs:one:vd', '%Zp, %Yp', NONE, PSP);
+    this.add('vzero', '110100:00:000:00110:two:00000:one:vd', '%Zp', NONE, PSP);
+    this.add('vone',  '110100:00:000:00111:two:00000:one:vd', '%Zp', NONE, PSP);
+
+    // VFPU Compare
+    this.add('vcmp', '011011:000:vt:two:vs:one:0:imm4', '%Zp, %Yp, %Xp', NONE, PSP);
+
+    // VFPU Min/Max
+    this.add('vmin', '011011:010:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+    this.add('vmax', '011011:011:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+
+    // VFPU Dot product
+    this.add('vdot', '011001:001:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+
+    // VFPU Scale
+    this.add('vscl', '011001:010:vt:two:vs:one:vd', '%Zp, %Yp, %Xs', NONE, PSP);
+
+    // VFPU Cross product (3-component)
+    this.add('vcrs', '011001:011:vt:two:vs:one:vd', '%Zt, %Yt, %Xt', NONE, PSP);
+
+    // VFPU Homogeneous dot product
+    this.add('vhdp', '011001:100:vt:two:vs:one:vd', '%Zp, %Yp, %Xp', NONE, PSP);
+
+    // VFPU Load/Store
+    this.add('lv.s', '110010:rs:vt5:imm14:vt2', '%Xs, %o', NONE, PSP);
+    this.add('sv.s', '111010:rs:vt5:imm14:vt2', '%Xs, %o', NONE, PSP);
+
+    // VFPU Move to/from GPR
+    this.add('mfv',  '010010:00:011:rt:0:vs:0000000', '%t, %Xs', NONE, PSP);
+    this.add('mtv',  '010010:00:111:rt:0:vd:0000000', '%t, %Xs', NONE, PSP);
+
+    // VFPU Control registers
+    this.add('mfvc', '010010:00:011:rt:0:imm8:0000000', '%t, %Xc', NONE, PSP);
+    this.add('mtvc', '010010:00:111:rt:0:imm8:0000000', '%t, %Xc', NONE, PSP);
+
+    // VFPU Branches
+    this.add('bvf',  '010010:01:000:imm3:00:imm16', '%O', OFFSET16, BRANCH | PSP);
+    this.add('bvt',  '010010:01:000:imm3:01:imm16', '%O', OFFSET16, BRANCH | PSP);
+    this.add('bvfl', '010010:01:000:imm3:10:imm16', '%O', OFFSET16, BRANCH | LIKELY | PSP);
+    this.add('bvtl', '010010:01:000:imm3:11:imm16', '%O', OFFSET16, BRANCH | LIKELY | PSP);
+
+    // ============================================
+    // Multiply-Accumulate (PSP)
+    // ============================================
+    this.add('madd',  '011100:rs:rt:00000:00000:000000', '%s, %t', NONE, PSP);
+    this.add('maddu', '011100:rs:rt:00000:00000:000001', '%s, %t', NONE, PSP);
+    this.add('msub',  '011100:rs:rt:00000:00000:000100', '%s, %t', NONE, PSP);
+    this.add('msubu', '011100:rs:rt:00000:00000:000101', '%s, %t', NONE, PSP);
+
+    // ============================================
+    // COP0 Instructions
+    // ============================================
+    this.add('mfc0', '010000:00000:rt:c0dr:00000:000000', '%t, %Cd', NONE, PSP);
+    this.add('mtc0', '010000:00100:rt:c0dr:00000:000000', '%t, %Cd', NONE, PSP);
   }
 }
