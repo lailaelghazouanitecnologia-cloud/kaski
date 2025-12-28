@@ -13,3 +13,7 @@ export * from './sceRtc';
 export * from './scePower';
 export * from './sceGe_user';
 export * from './sceAudio';
+export * from './UtilsForUser';
+export * from './LoadExecForUser';
+export * from './Kernel_Library';
+export * from './sceUtility';
