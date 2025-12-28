@@ -15,7 +15,7 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | HLE Managers | 8 | 10+ | 125% | New managers added |
 | HLE Modules | 50+ | 50+ | 95% | Some stubs |
 | VFS | 8 files | 6 files | 95% | ISO VFS added |
-| Format Parsers | 11 files | 9 files | 90% | CSO, ZLIB added |
+| Format Parsers | 11 files | 13 files | 118% | VAG, RIFF, PRX decrypt added |
 
 ## Detailed Component Status
 
@@ -171,8 +171,10 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | ISO | iso.ts | iso.ts | OK |
 | CSO | cso.ts | cso.ts | OK |
 | ZLIB | zlib.ts | zlib.ts | OK |
-| RIFF | riff.ts | Removed | N/A |
-| VAG | vag.ts | Removed | N/A |
+| RIFF | riff.ts | riff.ts | OK |
+| VAG | vag.ts | vag.ts | OK |
+| PRX Decrypt | elf_crypted_prx.ts | prxDecrypt.ts | OK |
+| PRX Keys | elf_crypted_prx_keys_*.ts | prxKeys.ts | OK |
 | ZIP | zip.ts | Removed | TODO |
 | DWARF | elf_dwarf.ts | Removed | N/A |
 
@@ -188,8 +190,8 @@ This document tracks the comparison between the legacy PSP emulator implementati
 ### Medium Priority
 
 1. **Additional KIRK Commands** - ECDSA Sign/Verify (SHA1, PRNG done)
-2. **VAG Audio** - PSP audio format
-3. **RIFF Audio** - Standard audio format
+2. ~~**VAG Audio**~~ - Implemented (vag.ts)
+3. ~~**RIFF Audio**~~ - Implemented (riff.ts)
 
 ### Low Priority
 
@@ -215,23 +217,26 @@ This document tracks the comparison between the legacy PSP emulator implementati
 | GPU | Unknown | 50+ | Basic |
 | Memory | Unknown | 50+ | Good |
 | HLE Modules | Unknown | 53+ | Growing |
-| KIRK | Unknown | 37 | Complete for impl |
-| Format | Unknown | 20+ | Basic |
+| KIRK | Unknown | 61 | SHA1, PRNG, CMD1, CMD7 |
+| Format | Unknown | 100+ | VAG, RIFF, PRX, CSO added |
+
+**Total: 848 tests across 29 files**
 
 ## Action Items
 
 ### Immediate
 
-- [ ] Fix cube-integration test issues
-- [ ] Add ISO VFS back
-- [ ] Implement CSO support
-- [ ] Complete KIRK commands
+- [x] Fix cube-integration test issues
+- [x] Add ISO VFS back
+- [x] Implement CSO support
+- [x] Complete KIRK commands (SHA1, PRNG)
 
 ### Short Term
 
 - [x] Add ZLIB support
-- [ ] Implement encrypted PRX loading
-- [ ] Add VAG audio decoder
+- [x] Implement encrypted PRX loading
+- [x] Add VAG audio decoder
+- [x] Add RIFF/WAV audio decoder
 - [ ] Complete remaining VFS implementations
 
 ### Long Term
