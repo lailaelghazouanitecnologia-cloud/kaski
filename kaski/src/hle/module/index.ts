@@ -7,3 +7,5 @@
 export * from './SysMemUserForUser';
 export * from './ThreadManForUser';
 export * from './IoFileMgrForUser';
+export * from './sceDisplay';
+export * from './sceCtrl';

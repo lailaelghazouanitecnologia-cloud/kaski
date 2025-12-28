@@ -11,6 +11,9 @@ import { MemoryManager } from './manager/MemoryManager';
 import { ThreadManager, Thread } from './manager/ThreadManager';
 import { CallbackManager } from './manager/CallbackManager';
 import { ModuleManager } from './manager/ModuleManager';
+import { SyncManager } from './manager/SyncManager';
+import { DisplayManager } from './manager/DisplayManager';
+import { InputManager } from './manager/InputManager';
 import { FileManager } from './vfs/FileManager';
 
 /**
@@ -36,6 +39,15 @@ export class EmulatorContext
   /** Module/syscall manager */
   readonly moduleManager: ModuleManager;
 
+  /** Sync primitives manager */
+  readonly syncManager: SyncManager;
+
+  /** Display manager */
+  readonly displayManager: DisplayManager;
+
+  /** Input manager */
+  readonly inputManager: InputManager;
+
   /** File manager */
   readonly fileManager: FileManager;
 
@@ -49,6 +61,9 @@ export class EmulatorContext
     this.threadManager = new ThreadManager(this.memoryManager);
     this.callbackManager = new CallbackManager();
     this.moduleManager = new ModuleManager();
+    this.syncManager = new SyncManager();
+    this.displayManager = new DisplayManager();
+    this.inputManager = new InputManager();
     this.fileManager = new FileManager();
 
     // Set context on module manager
@@ -66,6 +81,9 @@ export class EmulatorContext
     this.threadManager.reset();
     this.callbackManager.reset();
     this.moduleManager.reset();
+    this.syncManager.reset();
+    this.displayManager.reset();
+    this.inputManager.reset();
     this.fileManager.reset();
   }
 
