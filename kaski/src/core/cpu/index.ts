@@ -3,3 +3,4 @@ export * from './Instruction';
 export * from './InstructionType';
 export * from './InstructionTable';
 export * from './Disassembler';
+export * from './Interpreter';
