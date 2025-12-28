@@ -64,7 +64,6 @@ export class sceNetAdhoc {
 	/** Send a PDP packet to a destination. */
 	@nativeFunction(0xABED3790, 150)
     @I32 sceNetAdhocPdpSend(@I32 pdpId: number, @FBYTES(6) destMac: Uint8Array, @I32 port: number, @FBYTES(6) dataStream: Stream, @I32 timeout: number, @I32 nonblock: number) {
-		//debugger;
         const pdp = this.pdps.get(pdpId);
         const data = dataStream.readBytes(dataStream.length);
 		pdp.send(port, destMac, data);
@@ -287,17 +286,3 @@ class PdpStatStruct extends Struct {
 	@StructInt16 port = 0
     @StructUInt32 rcvdData = 0
 }
-
-/*
-class ptpStatStruct { // PTP status structure
-	public uint NextAddress; // Pointer to next PTP structure in list (ptpStatStruct *next;)
-	public int ptpId; // ptp ID
-	public fixed byte mac[6]; // MAC address
-	public fixed byte peermac[6]; // Peer MAC address
-	public ushort port; // Port
-	public ushort peerport; // Peer Port
-	public uint sentData; // Bytes sent
-	public uint rcvdData; // Bytes received
-	public int unk1; // Unknown
-}
-*/

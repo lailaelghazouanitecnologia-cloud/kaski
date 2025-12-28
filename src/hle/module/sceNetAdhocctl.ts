@@ -77,7 +77,6 @@ export class sceNetAdhocctl {
 	private _notifyAdhocctlHandler(event: Event, error = <SceKernelErrors>0) {
 		this.handlers.list().forEach(callback => {
 			this.context.callbackManager.executeLater(callback.callback, [event, error, callback.argument]);
-			//this.context.interop.execute(this.context.threadManager.current.state, callback.callback, [event, error, callback.argument]);
 		});
 	}
 }

@@ -14,7 +14,6 @@ export class sceNetAdhocMatching {
 	/** Initialise the Adhoc matching library */
 	@nativeFunction(0x2A2A1E07, 150)
 	@I32 sceNetAdhocMatchingInit(@I32 memSize: number) {
-		//stateOut.writeInt32(this.currentState);
 		this.poolStat.size = memSize;
 		this.poolStat.maxsize = memSize;
 		this.poolStat.freesize = memSize;
@@ -165,10 +164,7 @@ export class Matching {
 		this.sendMessage(Event.Cancel, mac, null as any);
 	}
 
-	//private messageQueue = [];
-
 	sendMessage(event: Event, tomac: Uint8Array, data: Uint8Array | null) {
-		//this.messageQueue.push({ event: event, tomac: ArrayBufferUtils.cloneBytes(tomac), data: ArrayBufferUtils.cloneBytes(data) });
 		if (!data) data = new Uint8Array(0);
 		if (event != Event.Hello) {
 			console.info("net.adhoc: send ->", Event[event], event, ':', mac2string(tomac), ':', Stream.fromUint8Array(data).readString(data.length));
@@ -199,14 +195,9 @@ export class Matching {
         this.context.memory.memset(dataPartition.low, 0, dataPartition.size);
 		this.context.memory.writeUint8Array(dataPartition.low, data);
 
-		//// @TODO: Enqueue callback instead of executing now?
-
 		this.context.callbackManager.executeLater(this.callback, [
 			this.id, event, macPartition.low, data.length, data.length ? dataPartition.low : 0
 		]);
-		//this.context.interop.execute(this.thread.state, this.callback, [
-		//	this.id, event, macPartition.low, data.length, data.length ? dataPartition.low : 0
-		//]);
 
 		dataPartition.deallocate();
 		macPartition.deallocate();
