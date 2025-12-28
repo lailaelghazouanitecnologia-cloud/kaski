@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaski - PSP Emulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #00d4ff;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .screen-container {
+      background: #000;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+    }
+
+    #screen {
+      display: block;
+      image-rendering: pixelated;
+      background: #000;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #00d4ff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #00a8cc;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .info {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+      color: #00d4ff;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .key-help {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .key-help h3 {
+      margin-bottom: 10px;
+      color: #00d4ff;
+    }
+
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+
+    .key-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .key-item kbd {
+      background: #333;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+
+    #log {
+      margin-top: 20px;
+      width: 960px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #111;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kaski PSP Emulator</h1>
+
+    <div class="screen-container">
+      <canvas id="screen" width="960" height="544"></canvas>
+    </div>
+
+    <div class="stats">
+      <span>FPS: <span id="fps">0</span></span>
+      <span>PC: <span id="pc">0x00000000</span></span>
+      <span>Instructions: <span id="instructions">0</span></span>
+    </div>
+
+    <div class="controls">
+      <input type="file" id="fileInput" class="file-input" accept=".elf,.pbp,.iso,.cso">
+      <button id="loadBtn">Load ROM</button>
+      <button id="startBtn" disabled>Start</button>
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="stepBtn" disabled>Step</button>
+      <button id="resetBtn" disabled>Reset</button>
+    </div>
+
+    <div class="info">
+      Drop a .elf or .pbp file to load, or click "Load ROM"
+    </div>
+
+    <div class="key-help">
+      <h3>Controls</h3>
+      <div class="key-grid">
+        <div class="key-item"><span>D-Pad</span><kbd>Arrow Keys</kbd></div>
+        <div class="key-item"><span>Triangle</span><kbd>W / I</kbd></div>
+        <div class="key-item"><span>Cross</span><kbd>S / K</kbd></div>
+        <div class="key-item"><span>Square</span><kbd>A / J</kbd></div>
+        <div class="key-item"><span>Circle</span><kbd>D / L</kbd></div>
+        <div class="key-item"><span>L Trigger</span><kbd>Q</kbd></div>
+        <div class="key-item"><span>R Trigger</span><kbd>E</kbd></div>
+        <div class="key-item"><span>Start</span><kbd>Enter</kbd></div>
+        <div class="key-item"><span>Select</span><kbd>Shift</kbd></div>
+      </div>
+    </div>
+
+    <div id="log"></div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
