@@ -56,3 +56,8 @@ export * from './sceNp';
 export * from './sceNpAuth';
 export * from './sceNpService';
 export * from './scePspNpDrm_user';
+
+// Kernel modules
+export * from './ExceptionManagerForKernel';
+export * from './KDebugForKernel';
+export * from './LoadCoreForKernel';

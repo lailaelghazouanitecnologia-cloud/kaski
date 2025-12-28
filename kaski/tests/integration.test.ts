@@ -62,6 +62,9 @@ function registerAllModules(ctx: EmulatorContext): void
     modules.sceNpAuth,
     modules.sceNpService,
     modules.scePspNpDrm_user,
+    modules.ExceptionManagerForKernel,
+    modules.KDebugForKernel,
+    modules.LoadCoreForKernel,
   ];
 
   for (const moduleClass of moduleClasses)
