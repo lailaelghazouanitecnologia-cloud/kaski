@@ -23,3 +23,8 @@ export * from './StdioForUser';
 export * from './sceUmdUser';
 export * from './sceDmac';
 export * from './sceHprm';
+export * from './sceImpose';
+export * from './sceSuspendForUser';
+export * from './sceReg';
+export * from './sceMpeg';
+export * from './sceSasCore';
