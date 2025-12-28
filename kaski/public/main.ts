@@ -39,6 +39,10 @@ let running = false;
 let instructionCount = 0;
 let syscallCount = 0;
 
+// Debug: track last PCs for crash debugging
+const pcHistory: number[] = [];
+const PC_HISTORY_SIZE = 20;
+
 // VRAM constants
 const VRAM_BASE = 0x04000000;
 const SCREEN_WIDTH = 480;
@@ -84,6 +88,54 @@ function log(message: string): void
   logEl.innerHTML += `[${time}] ${message}\n`;
   logEl.scrollTop = logEl.scrollHeight;
   console.log(message);
+}
+
+function logCrash(status: CpuStatus): void
+{
+  if (!cpu) return;
+
+  const state = cpu.state;
+  log(`=== CPU CRASH: ${CpuStatus[status]} ===`);
+  log(`PC: 0x${state.pc.toString(16).padStart(8, '0')}`);
+  log(`Instructions executed: ${instructionCount.toLocaleString()}`);
+
+  // Check if PC is in invalid region
+  if (state.pc >= 0x04000000 && state.pc < 0x04200000)
+  {
+    log(`ERROR: PC is in VRAM region! Program jumped to framebuffer.`);
+  }
+  else if (state.pc < 0x08000000)
+  {
+    log(`ERROR: PC is below user memory (0x08000000)`);
+  }
+
+  // Show key registers
+  log(`Registers:`);
+  log(`  $ra (r31): 0x${state.gpr[31].toString(16).padStart(8, '0')} (return address)`);
+  log(`  $sp (r29): 0x${state.gpr[29].toString(16).padStart(8, '0')} (stack pointer)`);
+  log(`  $v0 (r2):  0x${state.gpr[2].toString(16).padStart(8, '0')} (return value)`);
+  log(`  $a0 (r4):  0x${state.gpr[4].toString(16).padStart(8, '0')} (arg0)`);
+
+  // Show PC history
+  log(`Last ${pcHistory.length} PCs (oldest first):`);
+  const historyStr = pcHistory.map(pc => '0x' + pc.toString(16)).join(' -> ');
+  log(`  ${historyStr}`);
+
+  // Try to read instruction at crash PC
+  if (memory)
+  {
+    try
+    {
+      const instr = memory.lwu(state.pc);
+      log(`Instruction at PC: 0x${instr.toString(16).padStart(8, '0')}`);
+    }
+    catch (e)
+    {
+      log(`Could not read instruction at PC`);
+    }
+  }
+
+  console.log('Full CPU state:', state);
 }
 
 // ============================================
@@ -253,18 +305,25 @@ function runFrame(): void
 
   for (let i = 0; i < instructionsPerFrame; i++)
   {
+    // Track PC history
+    pcHistory.push(cpu.state.pc);
+    if (pcHistory.length > PC_HISTORY_SIZE) pcHistory.shift();
+
     const status = cpu.step();
     instructionCount++;
 
     if (status === CpuStatus.SYSCALL)
     {
       syscallCount++;
+      // Log syscall info
+      const code = cpu.state.gpr[2]; // v0 often has syscall code
+      log(`Syscall at PC=0x${cpu.state.pc.toString(16)}, code=${code}`);
       cpu.state.pc = cpu.state.npc;
     }
     else if (status === CpuStatus.STOPPED || status === CpuStatus.ERROR)
     {
       running = false;
-      log(`CPU stopped: ${CpuStatus[status]}`);
+      logCrash(status);
       break;
     }
   }

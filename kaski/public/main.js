@@ -15569,6 +15569,8 @@ var platform = null;
 var running = false;
 var instructionCount = 0;
 var syscallCount = 0;
+var pcHistory = [];
+var PC_HISTORY_SIZE = 20;
 var VRAM_BASE2 = 67108864;
 var SCREEN_WIDTH2 = 480;
 var SCREEN_HEIGHT2 = 272;
@@ -15595,6 +15597,36 @@ function log(message) {
 `;
   logEl.scrollTop = logEl.scrollHeight;
   console.log(message);
+}
+function logCrash(status) {
+  if (!cpu)
+    return;
+  const state = cpu.state;
+  log(`=== CPU CRASH: ${CpuStatus[status]} ===`);
+  log(`PC: 0x${state.pc.toString(16).padStart(8, "0")}`);
+  log(`Instructions executed: ${instructionCount.toLocaleString()}`);
+  if (state.pc >= 67108864 && state.pc < 69206016) {
+    log(`ERROR: PC is in VRAM region! Program jumped to framebuffer.`);
+  } else if (state.pc < 134217728) {
+    log(`ERROR: PC is below user memory (0x08000000)`);
+  }
+  log(`Registers:`);
+  log(`  $ra (r31): 0x${state.gpr[31].toString(16).padStart(8, "0")} (return address)`);
+  log(`  $sp (r29): 0x${state.gpr[29].toString(16).padStart(8, "0")} (stack pointer)`);
+  log(`  $v0 (r2):  0x${state.gpr[2].toString(16).padStart(8, "0")} (return value)`);
+  log(`  $a0 (r4):  0x${state.gpr[4].toString(16).padStart(8, "0")} (arg0)`);
+  log(`Last ${pcHistory.length} PCs (oldest first):`);
+  const historyStr = pcHistory.map((pc) => "0x" + pc.toString(16)).join(" -> ");
+  log(`  ${historyStr}`);
+  if (memory) {
+    try {
+      const instr = memory.lwu(state.pc);
+      log(`Instruction at PC: 0x${instr.toString(16).padStart(8, "0")}`);
+    } catch (e) {
+      log(`Could not read instruction at PC`);
+    }
+  }
+  console.log("Full CPU state:", state);
 }
 function registerAllModules(ctx2) {
   const moduleClasses = [
@@ -15693,14 +15725,19 @@ function runFrame() {
     return;
   const instructionsPerFrame = 1e5;
   for (let i = 0;i < instructionsPerFrame; i++) {
+    pcHistory.push(cpu.state.pc);
+    if (pcHistory.length > PC_HISTORY_SIZE)
+      pcHistory.shift();
     const status = cpu.step();
     instructionCount++;
     if (status === 3 /* SYSCALL */) {
       syscallCount++;
+      const code = cpu.state.gpr[2];
+      log(`Syscall at PC=0x${cpu.state.pc.toString(16)}, code=${code}`);
       cpu.state.pc = cpu.state.npc;
     } else if (status === 0 /* STOPPED */ || status === 4 /* ERROR */) {
       running = false;
-      log(`CPU stopped: ${CpuStatus[status]}`);
+      logCrash(status);
       break;
     }
   }
