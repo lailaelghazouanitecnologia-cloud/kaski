@@ -532,6 +532,154 @@ function assembleInstruction(pc: number, line: string, labels: Labels): number |
       return encodeRType(0, 0, 0, 0, 0, 0x0D) | ((code & 0xFFFFF) << 6);
     }
 
+    // PSP-specific instructions
+    case 'rotr': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      const sa = parseImmediate(operands[2]);
+      // opcode=0, rs=1, rt, rd, sa, func=0x02
+      return encodeRType(0, 1, rt, rd, sa, 0x02);
+    }
+
+    case 'rotrv': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      const rs = parseRegister(operands[2]);
+      // opcode=0, rs, rt, rd, sa=1, func=0x06
+      return encodeRType(0, rs, rt, rd, 1, 0x06);
+    }
+
+    case 'seb': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      // SPECIAL3 opcode=0x1F, rs=0, rt, rd, sa=0x10, func=0x20
+      return (0x1F << 26) | (rt << 16) | (rd << 11) | (0x10 << 6) | 0x20;
+    }
+
+    case 'seh': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      // SPECIAL3 opcode=0x1F, rs=0, rt, rd, sa=0x18, func=0x20
+      return (0x1F << 26) | (rt << 16) | (rd << 11) | (0x18 << 6) | 0x20;
+    }
+
+    case 'bitrev': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      // SPECIAL3 opcode=0x1F, rs=0, rt, rd, sa=0x14, func=0x20
+      return (0x1F << 26) | (rt << 16) | (rd << 11) | (0x14 << 6) | 0x20;
+    }
+
+    case 'wsbh': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      // SPECIAL3 opcode=0x1F, rs=0, rt, rd, sa=0x02, func=0x20
+      return (0x1F << 26) | (rt << 16) | (rd << 11) | (0x02 << 6) | 0x20;
+    }
+
+    case 'wsbw': {
+      const rd = parseRegister(operands[0]);
+      const rt = parseRegister(operands[1]);
+      // SPECIAL3 opcode=0x1F, rs=0, rt, rd, sa=0x03, func=0x20
+      return (0x1F << 26) | (rt << 16) | (rd << 11) | (0x03 << 6) | 0x20;
+    }
+
+    case 'max': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const rt = parseRegister(operands[2]);
+      return encodeRType(0, rs, rt, rd, 0, 0x2C);
+    }
+
+    case 'min': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const rt = parseRegister(operands[2]);
+      return encodeRType(0, rs, rt, rd, 0, 0x2D);
+    }
+
+    case 'movz': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const rt = parseRegister(operands[2]);
+      return encodeRType(0, rs, rt, rd, 0, 0x0A);
+    }
+
+    case 'movn': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const rt = parseRegister(operands[2]);
+      return encodeRType(0, rs, rt, rd, 0, 0x0B);
+    }
+
+    case 'clz': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      return encodeRType(0, rs, 0, rd, 0, 0x16);
+    }
+
+    case 'clo': {
+      const rd = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      return encodeRType(0, rs, 0, rd, 0, 0x17);
+    }
+
+    case 'ext': {
+      const rt = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const lsb = parseImmediate(operands[2]);
+      const size = parseImmediate(operands[3]);
+      const msbd = size - 1;  // msbd field is size-1, not lsb+size-1
+      // SPECIAL3 opcode=0x1F, rs, rt, msbd, lsb, func=0x00
+      return (0x1F << 26) | (rs << 21) | (rt << 16) | (msbd << 11) | (lsb << 6) | 0x00;
+    }
+
+    case 'ins': {
+      const rt = parseRegister(operands[0]);
+      const rs = parseRegister(operands[1]);
+      const lsb = parseImmediate(operands[2]);
+      const size = parseImmediate(operands[3]);
+      const msb = lsb + size - 1;
+      // SPECIAL3 opcode=0x1F, rs, rt, msb, lsb, func=0x04
+      return (0x1F << 26) | (rs << 21) | (rt << 16) | (msb << 11) | (lsb << 6) | 0x04;
+    }
+
+    case 'lwl': {
+      const rt = parseRegister(operands[0]);
+      const memMatch = operands[1].match(/(-?\d+)\((\$?\w+)\)/);
+      if (!memMatch) throw new Error(`Invalid memory operand: ${operands[1]}`);
+      const offset = parseImmediate(memMatch[1]);
+      const rs = parseRegister(memMatch[2]);
+      return encodeIType(0x22, rs, rt, offset);
+    }
+
+    case 'lwr': {
+      const rt = parseRegister(operands[0]);
+      const memMatch = operands[1].match(/(-?\d+)\((\$?\w+)\)/);
+      if (!memMatch) throw new Error(`Invalid memory operand: ${operands[1]}`);
+      const offset = parseImmediate(memMatch[1]);
+      const rs = parseRegister(memMatch[2]);
+      return encodeIType(0x26, rs, rt, offset);
+    }
+
+    case 'swl': {
+      const rt = parseRegister(operands[0]);
+      const memMatch = operands[1].match(/(-?\d+)\((\$?\w+)\)/);
+      if (!memMatch) throw new Error(`Invalid memory operand: ${operands[1]}`);
+      const offset = parseImmediate(memMatch[1]);
+      const rs = parseRegister(memMatch[2]);
+      return encodeIType(0x2A, rs, rt, offset);
+    }
+
+    case 'swr': {
+      const rt = parseRegister(operands[0]);
+      const memMatch = operands[1].match(/(-?\d+)\((\$?\w+)\)/);
+      if (!memMatch) throw new Error(`Invalid memory operand: ${operands[1]}`);
+      const offset = parseImmediate(memMatch[1]);
+      const rs = parseRegister(memMatch[2]);
+      return encodeIType(0x2E, rs, rt, offset);
+    }
+
     default:
       throw new Error(`Unknown instruction: ${mnemonic}`);
   }
