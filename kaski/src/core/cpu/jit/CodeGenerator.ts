@@ -1,7 +1,7 @@
-import { Instruction } from './Instruction';
-import { InstructionTable } from './InstructionTable';
-import type { InstructionType } from './InstructionType';
-import type { CpuState } from './CpuState';
+import { Instruction } from '../instruction/Instruction';
+import { InstructionTable } from '../instruction/InstructionTable';
+import type { InstructionType } from '../instruction/InstructionType';
+import type { CpuState } from '../CpuState';
 
 /**
  * Generated function result

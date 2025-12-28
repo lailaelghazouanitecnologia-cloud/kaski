@@ -1,5 +1,5 @@
-import type { CpuState } from './CpuState';
-import type { Memory } from '../memory';
+import type { CpuState } from '../CpuState';
+import type { Memory } from '../../memory';
 import { CodeGenerator, type GeneratedFunction } from './CodeGenerator';
 
 /**

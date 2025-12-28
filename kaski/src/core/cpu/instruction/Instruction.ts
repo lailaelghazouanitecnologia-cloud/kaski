@@ -1,8 +1,8 @@
-import type { Memory } from '../memory';
-import { BitUtils, hex } from '../utils';
+import type { Memory } from '../../memory';
+import { BitUtils, hex } from '../../utils';
 
 // Re-export BitUtils for backwards compatibility
-export { BitUtils } from '../utils';
+export { BitUtils } from '../../utils';
 
 /**
  * MIPS Instruction representation

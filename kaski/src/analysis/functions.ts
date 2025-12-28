@@ -1,5 +1,4 @@
-import { Instruction } from '../core/cpu/Instruction';
-import { InstructionTable } from '../core/cpu/InstructionTable';
+import { Instruction, InstructionTable } from '../core/cpu';
 import { ControlFlowGraph, BasicBlock, BlockType } from './cfg';
 
 /**

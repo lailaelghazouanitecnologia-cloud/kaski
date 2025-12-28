@@ -1,10 +1,9 @@
 import { Memory } from '../memory';
 import { CpuState } from './CpuState';
-import { Instruction } from './Instruction';
-import { Interpreter, ExecutionResult } from './Interpreter';
-import { InstructionTable } from './InstructionTable';
-import { disassembler, type DisassemblyResult } from './Disassembler';
-import { JitCache } from './JitCache';
+import { Instruction } from './instruction';
+import { Interpreter, ExecutionResult } from './interpreter';
+import { InstructionTable, disassembler, type DisassemblyResult } from './instruction';
+import { JitCache } from './jit';
 
 /**
  * CPU execution mode

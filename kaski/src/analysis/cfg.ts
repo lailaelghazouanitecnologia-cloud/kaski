@@ -1,7 +1,7 @@
-import { Instruction } from '../core/cpu/Instruction';
-import { InstructionTable } from '../core/cpu/InstructionTable';
-import type { InstructionType } from '../core/cpu/InstructionType';
-import { disassembler, type DisassemblyResult } from '../core/cpu/Disassembler';
+import {
+  Instruction, InstructionTable, disassembler,
+  type InstructionType, type DisassemblyResult,
+} from '../core/cpu';
 
 /**
  * Disassembled instruction with analysis metadata

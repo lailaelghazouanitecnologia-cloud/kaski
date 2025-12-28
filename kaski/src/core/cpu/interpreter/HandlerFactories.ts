@@ -1,5 +1,5 @@
-import type { CpuState } from './CpuState';
-import type { Instruction } from './Instruction';
+import type { CpuState } from '../CpuState';
+import type { Instruction } from '../instruction/Instruction';
 import { ExecutionResult } from './Interpreter';
 
 /**

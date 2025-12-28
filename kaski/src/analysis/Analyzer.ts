@@ -1,6 +1,4 @@
-import { Instruction } from '../core/cpu/Instruction';
-import { disassembler } from '../core/cpu/Disassembler';
-import { InstructionTable } from '../core/cpu/InstructionTable';
+import { Instruction, disassembler, InstructionTable } from '../core/cpu';
 import { ControlFlowGraph, BasicBlock, BlockType } from './cfg';
 import { FunctionFinder, FunctionInfo, FunctionSource } from './functions';
 

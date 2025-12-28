@@ -1,7 +1,7 @@
 import { Instruction } from './Instruction';
 import { InstructionType } from './InstructionType';
 import { InstructionTable } from './InstructionTable';
-import { GPR_NAMES, FPR_NAMES, hex } from '../utils';
+import { GPR_NAMES, FPR_NAMES, hex } from '../../utils';
 
 /**
  * Disassembled instruction result

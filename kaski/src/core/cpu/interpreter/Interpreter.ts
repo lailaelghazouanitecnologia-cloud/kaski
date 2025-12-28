@@ -1,7 +1,7 @@
-import { CpuState } from './CpuState';
-import { Instruction } from './Instruction';
-import { InstructionTable } from './InstructionTable';
-import type { InstructionType } from './InstructionType';
+import { CpuState } from '../CpuState';
+import { Instruction } from '../instruction/Instruction';
+import { InstructionTable } from '../instruction/InstructionTable';
+import type { InstructionType } from '../instruction/InstructionType';
 import {
   vfpuUnary, vfpuBinary, vfpuConstant, vfpuDot, vfpuScale,
   vAdd, vSub, vMul, vDiv, vMin, vMax,
@@ -18,7 +18,7 @@ import {
   fpuBinary, fpuUnary, fpuCmp, fpuConvert, fpuBranch, fpuBranchLikely,
   ops,
 } from './HandlerFactories';
-import { BitUtils } from '../utils';
+import { BitUtils } from '../../utils';
 
 /**
  * Execution result
