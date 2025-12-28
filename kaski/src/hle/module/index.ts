@@ -35,3 +35,24 @@ export * from './InterruptManager';
 export * from './UtilsForKernel';
 export * from './sceLibFont';
 export * from './sceMp3';
+
+// Network modules
+export * from './sceNet';
+export * from './sceNetInet';
+export * from './sceNetAdhoc';
+export * from './sceNetAdhocctl';
+export * from './sceNetAdhocMatching';
+export * from './sceNetApctl';
+export * from './sceNetResolver';
+
+// HTTP/SSL modules
+export * from './sceHttp';
+export * from './sceSsl';
+export * from './sceParseHttp';
+export * from './sceParseUri';
+
+// PlayStation Network modules
+export * from './sceNp';
+export * from './sceNpAuth';
+export * from './sceNpService';
+export * from './scePspNpDrm_user';
