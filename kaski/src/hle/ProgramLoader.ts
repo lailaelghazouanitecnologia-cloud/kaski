@@ -149,7 +149,7 @@ export class ProgramLoader
     const moduleName = moduleInfo?.name ?? 'unknown';
     const gp = moduleInfo ? moduleInfo.gp + baseAddress : 0;
 
-    // 4. Parse import tables
+    // 4. Parse import tables and patch stubs
     if (moduleInfo)
     {
       const importsStart = moduleInfo.importsStart + baseAddress;
@@ -157,6 +157,14 @@ export class ProgramLoader
 
       if (importsStart < importsEnd)
       {
+        // Parse the ELF's import table to get stub addresses
+        elf.parseImports(this.ctx.memory, baseAddress);
+
+        // Patch stubs with syscall instructions
+        // The NID itself is used as the syscall code
+        elf.patchImportStubs(this.ctx.memory, (nid, _moduleName) => nid);
+
+        // Also register with syscall manager for NID lookup
         this.syscallManager.parseImports(this.ctx.memory, importsStart, importsEnd);
       }
     }

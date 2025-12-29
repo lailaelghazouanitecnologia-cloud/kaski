@@ -775,18 +775,26 @@ export class ElfFile
     const importsStart = this.moduleInfo.importsStart + baseAddress;
     const importsEnd = this.moduleInfo.importsEnd + baseAddress;
 
-    // Each import entry is 20 bytes (old format) or 28 bytes (new format)
-    // We use old format: name(4) + version(2) + attr(2) + funcCount(1) + varCount(1) + pad(2) + nidData(4) + funcData(4)
+    // Each import entry is 20 bytes (old format):
+    // offset 0:  nameOffset (4 bytes)
+    // offset 4:  version (2 bytes)
+    // offset 6:  flags/attr (2 bytes)
+    // offset 8:  entrySize (1 byte)
+    // offset 9:  variableCount (1 byte)
+    // offset 10: functionCount (2 bytes)
+    // offset 12: nidAddress (4 bytes)
+    // offset 16: callAddress (4 bytes)
     const IMPORT_ENTRY_SIZE = 20;
 
     let offset = importsStart;
     while (offset + IMPORT_ENTRY_SIZE <= importsEnd)
     {
       const nameAddr = memory.lw(offset) >>> 0;
-      const version = memory.lw(offset + 4) & 0xFFFF;
-      const attr = (memory.lw(offset + 4) >> 16) & 0xFFFF;
-      const funcCount = memory.lbu(offset + 8);
+      const version = memory.lhu(offset + 4);
+      const attr = memory.lhu(offset + 6);
+      const entrySize = memory.lbu(offset + 8);
       const varCount = memory.lbu(offset + 9);
+      const funcCount = memory.lhu(offset + 10);
       const nidData = memory.lw(offset + 12) >>> 0;
       const funcData = memory.lw(offset + 16) >>> 0;
 
