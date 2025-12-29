@@ -18,10 +18,10 @@ export class sceAudio {
 		return (channelId >= 0 && channelId < this.channels.length);
 	}
 
+	/** Reserve the audio output for Output2 (used for background music) */
 	@nativeFunction(0x01562BA3, 150)
 	@U32 sceAudioOutput2Reserve(@I32 sampleCount: number) {
-		console.warn('sceAudioOutput2Reserve not implemented!');
-		debugger;
+		// Stub - always succeed, games typically check for errors
 		return 0;
 	}
 
@@ -130,15 +130,10 @@ export class sceAudio {
         return 0;
 	}
 
+	/** Change channel volume - stub implementation */
 	@nativeFunction(0xB7E1D8E7, 150)
     @U32 sceAudioChangeChannelVolume(@I32 channelId: number, @I32 volumeLeft: number, @I32 volumeRight: number) {
-		console.warn("Not implemented sceAudioChangeChannelVolume");
-		return 0;
-	}
-
-	@nativeFunction(0xB7E1D8E7, 150)
-    @U32 sceAudioGetChannelRestLen(@I32 channelId: number) {
-		console.warn("Not implemented sceAudioGetChannelRestLen");
+		// Stub - volume changes are ignored but return success
 		return 0;
 	}
 }

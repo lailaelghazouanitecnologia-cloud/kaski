@@ -17,18 +17,22 @@ export class ModuleMgrForUser {
 		return 0;
 	}
 
+	/** Stop and unload the current module - terminates calling thread */
 	@nativeFunction(0xD675EBB8, 150)
     @U32 sceKernelSelfStopUnloadModule(@I32 unknown: number, @I32 argsize: number, @I32 argp: number, @THREAD thread: Thread) {
-		console.info("Call stack:");
-		thread.state.printCallstack(this.context.symbolLookup);
-		//this.context.instructionCache.functionGenerator.getInstructionUsageCount().forEach((item) => { console.log(item.name, ':', item.count); });
-		console.warn(sprintf('Not implemented ModuleMgrForUser.sceKernelSelfStopUnloadModule(%d, %d, %d)', unknown, argsize, argp));
-		throw new Error("sceKernelSelfStopUnloadModule");
+		console.info(`sceKernelSelfStopUnloadModule: Terminating thread ${thread.name}`);
+		// Mark thread for termination - following PPSSPP pattern
+		thread.stop("sceKernelSelfStopUnloadModule");
+		return 0;
 	}
 
+	/** Stop and unload self module - terminates calling thread */
 	@nativeFunction(0xCC1D3699, 150)
     @U32 sceKernelStopUnloadSelfModule(@I32 argsize: number, @I32 argp: number, @I32 optionsAddress:number, @THREAD thread: Thread) {
-		throw new Error("sceKernelStopUnloadSelfModule");
+		console.info(`sceKernelStopUnloadSelfModule: Terminating thread ${thread.name}`);
+		// Mark thread for termination - following PPSSPP pattern
+		thread.stop("sceKernelStopUnloadSelfModule");
+		return 0;
 	}
 
 	@nativeFunction(0x977DE386, 150)
