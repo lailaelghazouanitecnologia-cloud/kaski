@@ -859,18 +859,27 @@ export class ElfFile
         const stubAddr = imp.stubAddrs[i];
         const syscallNum = nidToSyscall(nid, imp.moduleName);
 
+        // PSP import stub format:
+        // Instruction 0: jr $ra (0x03E00008)
+        // Instruction 1: syscall <num> (0x0000000C | (num << 6))
+
+        // Write jr $ra
+        memory.sw(stubAddr, 0x03E00008);
+
         if (syscallNum !== undefined)
         {
-          // PSP import stub format:
-          // Instruction 0: jr $ra (0x03E00008)
-          // Instruction 1: syscall <num> (0x0000000C | (num << 6))
-
-          // Write jr $ra
-          memory.sw(stubAddr, 0x03E00008);
-          // Write syscall with the NID as the code
+          // Write syscall with the syscall number
           // The syscall code is in bits 25-6 (20 bits)
           memory.sw(stubAddr + 4, 0x0000000C | (syscallNum << 6));
           patchCount++;
+        }
+        else
+        {
+          // For missing functions, use the NID as the syscall code
+          // This allows the syscall handler to at least log it
+          // Use upper 20 bits of NID (syscall code is 20 bits)
+          const fallbackCode = (nid >>> 12) & 0xFFFFF;
+          memory.sw(stubAddr + 4, 0x0000000C | (fallbackCode << 6));
         }
       }
     }
