@@ -227,6 +227,29 @@ export class ThreadManForUser
   }
 
   /**
+   * sceKernelChangeCurrentThreadAttr
+   * Change current thread attributes
+   *
+   * @param removeAttr - Attributes to remove
+   * @param addAttr - Attributes to add
+   * @returns 0
+   */
+  @nativeFunction(0xEA748E31, 150)
+  sceKernelChangeCurrentThreadAttr(): number
+  {
+    const removeAttr = this.ctx.arg(0);
+    const addAttr = this.ctx.arg(1);
+
+    const thread = this.ctx.threadManager.getCurrentThread();
+    if (thread)
+    {
+      thread.attributes = (thread.attributes & ~removeAttr) | addAttr;
+    }
+
+    return 0;
+  }
+
+  /**
    * sceKernelRotateThreadReadyQueue
    * Rotate thread ready queue
    *
