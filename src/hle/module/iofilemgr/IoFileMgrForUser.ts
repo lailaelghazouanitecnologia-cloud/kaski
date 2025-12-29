@@ -249,7 +249,7 @@ export class IoFileMgrForUser {
 		stat2.deviceDependentData[0] = stat.dependentData0 || 0;
 		stat2.deviceDependentData[1] = stat.dependentData1 || 0;
 
-		stat2.attributes = 0;
+		stat2.attributes = 0 as IOFileModes;
 		if (stat.isDirectory) {
 			stat2.mode = 0x1000; // Directory
 			stat2.attributes |= IOFileModes.Directory;

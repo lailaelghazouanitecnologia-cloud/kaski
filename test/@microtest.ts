@@ -1,3 +1,5 @@
+declare const process: any;
+
 class TestContext {
     testCount: number = 0
     testFailed: number = 0
@@ -36,7 +38,7 @@ class ItNode {
             console.log(...params)
         }
         if (error) {
-            const exception = (error.stack || error).toString().replace(/.*at.*@microtest\.ts.*/gm, '###').replace(/###(\n|$)/g, '')
+            const exception = ((error as Error).stack || error).toString().replace(/.*at.*@microtest\.ts.*/gm, '###').replace(/###(\n|$)/g, '')
             context.exceptions.push(exception)
             console.error(exception)
         }

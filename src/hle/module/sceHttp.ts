@@ -1,5 +1,6 @@
 import {EmulatorContext} from "../../emu/context";
 import {Stream} from "../../global/stream";
+import {Integer64} from "../../global/int64";
 import {I32, nativeFunction, PTR, STRING, U32} from "../utils";
 
 /**
@@ -92,7 +93,7 @@ export class sceHttp {
 	/** Get response content length */
 	@nativeFunction(0x0B12ABFB, 150)
 	@I32 sceHttpGetContentLength(@I32 requestId: number, @PTR contentLengthPtr: Stream) {
-		contentLengthPtr.writeInt64(0);
+		contentLengthPtr.writeInt64(Integer64.ZERO);
 		return 0x80431001;
 	}
 

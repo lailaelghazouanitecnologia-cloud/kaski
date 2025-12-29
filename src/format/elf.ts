@@ -17,8 +17,8 @@ export class ElfHeader extends Struct {
 	@StructInt8 data: number = 0
 	@StructInt8 idVersion: number = 0
 	@StructStructArray(Int8, 9) _padding: number[] = []
-	@StructUInt16 type: ElfType = 0
-	@StructInt16 machine: ElfMachine = 0
+	@StructUInt16 type: ElfType = 0 as ElfType
+	@StructInt16 machine: ElfMachine = 0 as ElfMachine
 	@StructInt32 version: number = 0
 	@StructInt32 entryPoint: number = 0
 	@StructInt32 programHeaderOffset: number = 0

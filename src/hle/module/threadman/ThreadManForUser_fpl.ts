@@ -76,7 +76,7 @@ class Fpl {
     private allocIndex() {
         let index = -1
         if (this.freeList.size > 0) {
-            index = this.freeList.keys().next().value
+            index = this.freeList.keys().next().value!
             this.freeList.delete(index)
         } else if (this.currentOffset < this.blocks) {
             index = this.currentOffset++

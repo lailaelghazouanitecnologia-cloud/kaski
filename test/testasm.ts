@@ -25,7 +25,8 @@ function executeProgram(gprInitial: StringDictionary<number>, program: string[])
     const cpuConfig = new CpuConfig()
     const state = new CpuState(memory, new TestSyscallManager(), cpuConfig);
 
-    for (const [key, value] of Object.entries(gprInitial)) {
+    for (const key of Object.keys(gprInitial)) {
+        const value = gprInitial[key];
         if (key.substr(0, 1) == '$') {
             state.setGPR(parseInt(key.substr(1)), value);
         } else {
@@ -39,7 +40,7 @@ function executeProgram(gprInitial: StringDictionary<number>, program: string[])
     try {
         CpuExecutor.executeAtPC(state)
     } catch (e) {
-        if (e.message != 'CpuBreakException') throw e;
+        if ((e as Error).message != 'CpuBreakException') throw e;
     }
     return state;
 }
@@ -66,7 +67,8 @@ function generateGpr3Matrix(op: string, vector: number[]) {
 function assertProgram(description:string, gprInitial: any, program: string[], gprAssertions: StringDictionary<number>) {
     const state = executeProgram(gprInitial, program);
     //console.log(state);
-    for (const [key, assertion] of Object.entries(gprAssertions)) {
+    for (const key of Object.keys(gprAssertions)) {
+		const assertion = gprAssertions[key];
 		let value: number = 0;
 		if (key.substr(0, 1) == '$') {
 			value = state.getGPR(parseInt(key.substr(1)));

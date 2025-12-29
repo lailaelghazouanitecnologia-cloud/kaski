@@ -24,7 +24,7 @@ class Header extends Struct {
 
 class Block {
 	private _uncompressedData: Uint8Array|null = null;
-	public compressedData: Uint8Array = new Uint8Array()
+	public compressedData: Uint8Array = new Uint8Array(0)
 	public compressed: boolean;
 	public low: number;
 	public high: number;

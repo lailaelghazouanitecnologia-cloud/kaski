@@ -595,7 +595,7 @@ export class PspGpu implements Component {
 				});
 				//return this.freezing.waitUntilValueAsync(false);
 			} catch (e) {
-                EmulatorUI.openMessageAsync(e.stack || e)
+                EmulatorUI.openMessageAsync((e as Error).stack || String(e))
 				throw e;
 			}
 		});

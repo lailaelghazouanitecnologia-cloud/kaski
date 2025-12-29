@@ -331,7 +331,7 @@ export class Emulator {
             return this.emulatorVfs.output;
         } catch (e) {
             console.error(e);
-            console.error(e.stack);
+            console.error((e as Error).stack);
             throw(e);
         }
 	}
@@ -357,7 +357,7 @@ export class Emulator {
             return await this._loadAndExecuteAsync(asyncStream, "ms0:/PSP/GAME/virtual/EBOOT.PBP");
         } catch (e) {
 			console.error(e);
-			console.error(e.stack);
+			console.error((e as Error).stack);
 			throw (e);
 		}
 	}

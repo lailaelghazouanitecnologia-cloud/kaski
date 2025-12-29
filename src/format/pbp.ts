@@ -7,7 +7,7 @@ enum PbpMagic {
 }
 
 class PbpHeader extends Struct {
-    @StructInt32 magic: PbpMagic = 0
+    @StructInt32 magic: PbpMagic = 0 as PbpMagic
     @StructInt32 version: number = 0
     @StructStructArray(Int32, 8) offsets: number[] = []
 }

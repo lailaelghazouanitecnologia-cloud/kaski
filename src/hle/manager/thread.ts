@@ -404,7 +404,7 @@ export class ThreadManager implements Component {
 			//debugger;
 			if (CpuBreakException.is(e)) return
             if (ProgramExitException.is(e)) throw e
-            const estack = e['stack'] || e;
+            const estack = (e as Error).stack || String(e);
             EmulatorUI.openMessageAsync(estack)
 			thread.stop(`thread.stop.error:${estack}`)
 			throw e

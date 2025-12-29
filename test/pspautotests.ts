@@ -1,4 +1,5 @@
-﻿
+
+declare const process: any;
 
 import {MemoryAsyncStream, Stream} from "../src/global/stream";
 import {assert, before, after, it, describe} from "./@microtest";

@@ -90,7 +90,7 @@ export class WebGlPspDrawDriver {
     }
 
 	private clearing: boolean = false
-	private clearingFlags: ClearBufferSet = 0
+	private clearingFlags: ClearBufferSet = 0 as ClearBufferSet
 
 	setClearMode(clearing: boolean, flags: number) {
 		this.clearing = clearing;

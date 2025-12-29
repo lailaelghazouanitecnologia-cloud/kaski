@@ -235,7 +235,7 @@ export class DropboxVfsEntry extends VfsEntry {
                 return new DropboxVfsEntry(path, info.name, info.size!, info[".tag"] == 'file', new Date(info.server_modified || ""));
             }
         } catch (e) {
-            return await readedErrorAsync(e);
+            return await readedErrorAsync(e as Error);
         }
 	}
 
@@ -305,7 +305,7 @@ export class DropboxVfsEntry extends VfsEntry {
 
             clearTimeout(this.writeTimer);
             this.writeTimer = setTimeout(() => {
-                client.writeFileAsync(this.path, newContent);
+                client.writeFileAsync(this.path, newContent.buffer as ArrayBuffer);
             }, 500) as any;
             return dataToWrite.byteLength
         })())

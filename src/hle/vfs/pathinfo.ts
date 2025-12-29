@@ -2,7 +2,7 @@ export class PathInfo {
     constructor(public fullPath: string) {
     }
 
-    get parent() {
+    get parent(): PathInfo | null {
         const lastIndex = this.fullPath.lastIndexOf('/')
         return (lastIndex >= 0) ? new PathInfo(this.fullPath.substr(0, lastIndex)) : null
     }

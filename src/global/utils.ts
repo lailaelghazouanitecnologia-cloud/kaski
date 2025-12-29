@@ -1038,8 +1038,8 @@ export class Logger {
 	warn(...args: any[]) { this._log('warn', LoggerLevel.WARN, args); }
 	error(...args: any[]) { this._log('error', LoggerLevel.ERROR, args); }
 
-	groupCollapsed(...args: any[]) { this._log('groupCollapsed', 5, args); }
-	groupEnd(...args: any[]) { this._log('groupEnd', 5, args); }
+	groupCollapsed(...args: any[]) { this._log('groupCollapsed', LoggerLevel.DEBUG, args); }
+	groupEnd(...args: any[]) { this._log('groupEnd', LoggerLevel.DEBUG, args); }
 
 	isEnabled(level: LoggerLevel): boolean { return loggerPolicies.canLog(this.name, level) }
     get isTraceEnabled(): boolean { return this.isEnabled(LoggerLevel.DEBUG) }
@@ -1338,7 +1338,7 @@ export class PromiseFast<T> implements Thenable<T>, PromiseLike<T> {
 							resolve(result);
 						}
 					} catch (e) {
-						reject(e);
+						reject(e as Error);
 					}
 				});
 			} else {
@@ -1355,7 +1355,7 @@ export class PromiseFast<T> implements Thenable<T>, PromiseLike<T> {
 							resolve(result);
 						}
 					} catch (e) {
-						reject(e);
+						reject(e as Error);
 					}
 				});
 			} else {
