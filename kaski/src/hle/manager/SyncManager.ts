@@ -55,6 +55,7 @@ export class EventFlag
 {
   private pattern: number;
   private waitQueue = new WaitQueue<EventFlag, number>();
+  public readonly initialPattern: number;
 
   constructor(
     public readonly uid: number,
@@ -64,6 +65,7 @@ export class EventFlag
   )
   {
     this.pattern = initialPattern >>> 0;
+    this.initialPattern = initialPattern >>> 0;
   }
 
   get currentPattern(): number

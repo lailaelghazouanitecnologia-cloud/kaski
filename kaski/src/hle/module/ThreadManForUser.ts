@@ -344,6 +344,248 @@ export class ThreadManForUser
   }
 
   // ============================================
+  // System Time
+  // ============================================
+
+  /**
+   * sceKernelGetSystemTimeLow
+   * Get low 32 bits of system time in microseconds
+   *
+   * @returns Low 32 bits of system time
+   */
+  @nativeFunction(0x369ED59D, 150)
+  sceKernelGetSystemTimeLow(): number
+  {
+    // Return current time in microseconds (low 32 bits)
+    return (performance.now() * 1000) >>> 0;
+  }
+
+  /**
+   * sceKernelGetSystemTimeWide
+   * Get system time as 64-bit value in microseconds
+   *
+   * @returns System time in microseconds (as 64-bit)
+   */
+  @nativeFunction(0x82BC5777, 150)
+  sceKernelGetSystemTimeWide(): bigint
+  {
+    // Return current time in microseconds as 64-bit
+    return BigInt(Math.floor(performance.now() * 1000));
+  }
+
+  /**
+   * sceKernelGetSystemTime
+   * Get system time and store in pointer
+   *
+   * @param timePtr - Pointer to store 64-bit time value
+   * @returns 0 or error
+   */
+  @nativeFunction(0xDB738F35, 150)
+  sceKernelGetSystemTime(): number
+  {
+    const timePtr = this.ctx.argPtr(0);
+    if (!timePtr)
+    {
+      return SceKernelErrors.ERROR_INVALID_ARGUMENT;
+    }
+
+    const time = BigInt(Math.floor(performance.now() * 1000));
+    this.ctx.write64(timePtr, time);
+    return 0;
+  }
+
+  /**
+   * sceKernelUSec2SysClock
+   * Convert microseconds to system clock value
+   *
+   * @param usec - Microseconds
+   * @param clockPtr - Pointer to store clock value
+   * @returns 0 or error
+   */
+  @nativeFunction(0x110DEC9A, 150)
+  sceKernelUSec2SysClock(): number
+  {
+    const usec = this.ctx.arg(0);
+    const clockPtr = this.ctx.argPtr(1);
+
+    if (clockPtr)
+    {
+      this.ctx.write64(clockPtr, BigInt(usec));
+    }
+    return 0;
+  }
+
+  /**
+   * sceKernelUSec2SysClockWide
+   * Convert microseconds to system clock value (wide)
+   *
+   * @param usec - Microseconds
+   * @returns Clock value
+   */
+  @nativeFunction(0xC8CD158C, 150)
+  sceKernelUSec2SysClockWide(): number
+  {
+    const usec = this.ctx.arg(0);
+    // Simply return the microseconds value
+    return usec;
+  }
+
+  // ============================================
+  // Thread Wait/Status
+  // ============================================
+
+  /**
+   * sceKernelWaitThreadEnd
+   * Wait for thread to end
+   *
+   * @param thid - Thread UID
+   * @param timeoutPtr - Timeout pointer
+   * @returns Exit status or error
+   */
+  @nativeFunction(0x278C0DF5, 150)
+  sceKernelWaitThreadEnd(): number
+  {
+    const thid = this.ctx.arg(0);
+    // const timeoutPtr = this.ctx.argPtr(1);
+
+    const thread = this.ctx.threadManager.getThread(thid);
+    if (!thread)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+
+    // For now, return the exit status if thread is stopped
+    // TODO: Implement actual waiting
+    return thread.exitStatus;
+  }
+
+  /**
+   * sceKernelWaitThreadEndCB
+   * Wait for thread to end with callback processing
+   *
+   * @param thid - Thread UID
+   * @param timeoutPtr - Timeout pointer
+   * @returns Exit status or error
+   */
+  @nativeFunction(0x840E8133, 150)
+  sceKernelWaitThreadEndCB(): number
+  {
+    const thid = this.ctx.arg(0);
+    // const timeoutPtr = this.ctx.argPtr(1);
+
+    const currentThread = this.ctx.threadManager.getCurrentThread();
+    if (currentThread)
+    {
+      currentThread.callbackAccepting = true;
+    }
+
+    const thread = this.ctx.threadManager.getThread(thid);
+    if (!thread)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+
+    return thread.exitStatus;
+  }
+
+  /**
+   * sceKernelGetThreadExitStatus
+   * Get thread exit status
+   *
+   * @param thid - Thread UID
+   * @returns Exit status or error
+   */
+  @nativeFunction(0x3B183E26, 150)
+  sceKernelGetThreadExitStatus(): number
+  {
+    const thid = this.ctx.arg(0);
+
+    const thread = this.ctx.threadManager.getThread(thid);
+    if (!thread)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+
+    return thread.exitStatus;
+  }
+
+  /**
+   * sceKernelTerminateDeleteThread
+   * Terminate and delete a thread
+   *
+   * @param thid - Thread UID
+   * @returns 0 or error
+   */
+  @nativeFunction(0x383F7BCC, 150)
+  sceKernelTerminateDeleteThread(): number
+  {
+    const thid = this.ctx.arg(0);
+
+    // Terminate first
+    const termResult = this.ctx.threadManager.terminateThread(thid);
+    if (termResult !== 0)
+    {
+      return termResult;
+    }
+
+    // Then delete
+    return this.ctx.threadManager.deleteThread(thid);
+  }
+
+  /**
+   * sceKernelReferThreadStatus
+   * Get thread status information
+   *
+   * @param thid - Thread UID
+   * @param infoPtr - Pointer to SceKernelThreadInfo struct
+   * @returns 0 or error
+   */
+  @nativeFunction(0x17C1684E, 150)
+  sceKernelReferThreadStatus(): number
+  {
+    const thid = this.ctx.arg(0);
+    const infoPtr = this.ctx.argPtr(1);
+
+    const thread = this.ctx.threadManager.getThread(thid);
+    if (!thread)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+
+    if (!infoPtr)
+    {
+      return SceKernelErrors.ERROR_INVALID_ARGUMENT;
+    }
+
+    // Write SceKernelThreadInfo structure
+    // Size is at offset 0
+    const size = this.ctx.read32(infoPtr);
+
+    // Write thread info fields
+    this.ctx.write32(infoPtr + 0, size); // size
+    this.ctx.writeString(infoPtr + 4, thread.name, 32); // name[32]
+    this.ctx.write32(infoPtr + 36, thread.attributes); // attr
+    this.ctx.write32(infoPtr + 40, thread.status); // status
+    this.ctx.write32(infoPtr + 44, thread.entryPoint); // entry
+    this.ctx.write32(infoPtr + 48, thread.cpu.gpr[29]); // stack
+    this.ctx.write32(infoPtr + 52, thread.stackSize); // stackSize
+    this.ctx.write32(infoPtr + 56, thread.cpu.gpr[28]); // gpReg
+    this.ctx.write32(infoPtr + 60, thread.priority); // initPriority
+    this.ctx.write32(infoPtr + 64, thread.priority); // currentPriority
+    this.ctx.write32(infoPtr + 68, 0); // waitType
+    this.ctx.write32(infoPtr + 72, 0); // waitId
+    this.ctx.write32(infoPtr + 76, 0); // wakeupCount
+    this.ctx.write32(infoPtr + 80, thread.exitStatus); // exitStatus
+    this.ctx.write32(infoPtr + 84, 0); // runClocksLow
+    this.ctx.write32(infoPtr + 88, 0); // runClocksHigh
+    this.ctx.write32(infoPtr + 92, 0); // intrPreemptCount
+    this.ctx.write32(infoPtr + 96, 0); // threadPreemptCount
+    this.ctx.write32(infoPtr + 100, 0); // releaseCount
+
+    return 0;
+  }
+
+  // ============================================
   // Callbacks
   // ============================================
 
@@ -1037,5 +1279,227 @@ export class ThreadManForUser
       },
       error => error
     );
+  }
+
+  /**
+   * sceKernelReferEventFlagStatus
+   * Get event flag status
+   *
+   * @param evid - Event flag UID
+   * @param infoPtr - Pointer to info structure
+   * @returns 0 or error
+   */
+  @nativeFunction(0xA66B0120, 150)
+  sceKernelReferEventFlagStatus(): number
+  {
+    const evid = this.ctx.arg(0);
+    const infoPtr = this.ctx.argPtr(1);
+
+    const ef = this.ctx.syncManager.getEventFlag(evid);
+    if (!ef)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_EVENT_FLAG;
+    }
+
+    if (infoPtr)
+    {
+      // SceKernelEventFlagInfo structure:
+      // 0x00: size (4 bytes)
+      // 0x04: name (32 bytes)
+      // 0x24: attr (4 bytes)
+      // 0x28: initPattern (4 bytes)
+      // 0x2C: currentPattern (4 bytes)
+      // 0x30: numWaitThreads (4 bytes)
+      const size = this.ctx.read32(infoPtr);
+      if (size >= 0x34)
+      {
+        this.ctx.write32(infoPtr, 0x34); // size
+        this.ctx.writeString(infoPtr + 4, ef.name, 32);
+        this.ctx.write32(infoPtr + 0x24, ef.attr);
+        this.ctx.write32(infoPtr + 0x28, ef.initialPattern);
+        this.ctx.write32(infoPtr + 0x2C, ef.currentPattern);
+        this.ctx.write32(infoPtr + 0x30, ef.waitingThreads);
+      }
+    }
+
+    return SceKernelErrors.ERROR_OK;
+  }
+
+  /**
+   * sceKernelCancelSema
+   * Cancel all waiting threads on a semaphore
+   *
+   * @param semaId - Semaphore UID
+   * @param count - New semaphore count
+   * @param numWaitThreadsPtr - Output for number of cancelled threads
+   * @returns 0 or error
+   */
+  @nativeFunction(0x8FFDF9A2, 150)
+  sceKernelCancelSema(): number
+  {
+    const semaId = this.ctx.arg(0);
+    const count = this.ctx.arg(1);
+    const numWaitPtr = this.ctx.argPtr(2);
+
+    const info = this.ctx.syncManager.getSemaphoreInfo(semaId);
+    if (!info)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_SEMAPHORE;
+    }
+
+    const sema = this.ctx.syncManager.getSemaphore(semaId);
+    if (!sema)
+    {
+      return SceKernelErrors.ERROR_KERNEL_NOT_FOUND_SEMAPHORE;
+    }
+
+    // Get number of waiting threads before cancel
+    const numWaiting = info.numWaitThreads;
+    if (numWaitPtr)
+    {
+      this.ctx.write32(numWaitPtr, numWaiting);
+    }
+
+    // Cancel all waiting threads
+    sema.cancelAll();
+
+    return SceKernelErrors.ERROR_OK;
+  }
+
+  // ========================================
+  // Fixed Pool (FPL) functions - stub implementations
+  // ========================================
+
+  /**
+   * sceKernelCreateFpl
+   * Create a fixed pool memory block
+   *
+   * @param name - Pool name
+   * @param partitionId - Memory partition ID
+   * @param attr - Pool attributes
+   * @param size - Block size
+   * @param blocks - Number of blocks
+   * @param optionsPtr - Options pointer
+   * @returns FPL UID or error
+   */
+  @nativeFunction(0xC07BB470, 150)
+  sceKernelCreateFpl(): number
+  {
+    const namePtr = this.ctx.argPtr(0);
+    const partitionId = this.ctx.arg(1);
+    const attr = this.ctx.arg(2);
+    const size = this.ctx.arg(3);
+    const blocks = this.ctx.arg(4);
+    // optionsPtr = this.ctx.argPtr(5);
+
+    const name = namePtr ? this.ctx.readString(namePtr, 32) : '';
+    console.warn(`sceKernelCreateFpl: ${name} (partition=${partitionId}, size=${size}, blocks=${blocks}) - stub`);
+
+    // Return a dummy UID for now
+    return 1;
+  }
+
+  /**
+   * sceKernelAllocateFpl
+   * Allocate a block from a fixed pool
+   *
+   * @param uid - FPL UID
+   * @param dataPtr - Output address pointer
+   * @param timeoutPtr - Timeout pointer
+   * @returns 0 or error
+   */
+  @nativeFunction(0xD979E9BF, 150)
+  sceKernelAllocateFpl(): number
+  {
+    const uid = this.ctx.arg(0);
+    const dataPtr = this.ctx.argPtr(1);
+    // timeoutPtr = this.ctx.argPtr(2);
+
+    console.warn(`sceKernelAllocateFpl: uid=${uid} - stub`);
+
+    // Return a dummy address in user memory
+    if (dataPtr)
+    {
+      this.ctx.write32(dataPtr, 0x08900000);
+    }
+
+    return SceKernelErrors.ERROR_OK;
+  }
+
+  /**
+   * sceKernelFreeFpl
+   * Free a block back to a fixed pool
+   *
+   * @param uid - FPL UID
+   * @param dataPtr - Address to free
+   * @returns 0 or error
+   */
+  @nativeFunction(0xF6414A71, 150)
+  sceKernelFreeFpl(): number
+  {
+    const uid = this.ctx.arg(0);
+    const dataPtr = this.ctx.argPtr(1);
+
+    console.warn(`sceKernelFreeFpl: uid=${uid}, addr=${dataPtr?.toString(16)} - stub`);
+
+    return SceKernelErrors.ERROR_OK;
+  }
+
+  // ========================================
+  // Variable Pool (VPL) functions - stub implementations
+  // ========================================
+
+  /**
+   * sceKernelCreateVpl
+   * Create a variable pool memory block
+   *
+   * @param name - Pool name
+   * @param partitionId - Memory partition ID
+   * @param attr - Pool attributes
+   * @param size - Pool size
+   * @param optionsPtr - Options pointer
+   * @returns VPL UID or error
+   */
+  @nativeFunction(0x56C039B5, 150)
+  sceKernelCreateVpl(): number
+  {
+    const namePtr = this.ctx.argPtr(0);
+    const partitionId = this.ctx.arg(1);
+    const attr = this.ctx.arg(2);
+    const size = this.ctx.arg(3);
+    // optionsPtr = this.ctx.argPtr(4);
+
+    const name = namePtr ? this.ctx.readString(namePtr, 32) : '';
+    console.warn(`sceKernelCreateVpl: ${name} (partition=${partitionId}, size=${size}) - stub`);
+
+    // Return a dummy UID for now
+    return 1;
+  }
+
+  /**
+   * sceKernelTryAllocateVpl
+   * Try to allocate from a variable pool (non-blocking)
+   *
+   * @param uid - VPL UID
+   * @param size - Size to allocate
+   * @param addressPtr - Output address pointer
+   * @returns 0 or error
+   */
+  @nativeFunction(0xAF36D708, 150)
+  sceKernelTryAllocateVpl(): number
+  {
+    const uid = this.ctx.arg(0);
+    const size = this.ctx.arg(1);
+    const addressPtr = this.ctx.argPtr(2);
+
+    console.warn(`sceKernelTryAllocateVpl: uid=${uid}, size=${size} - stub`);
+
+    // Return a dummy address in user memory
+    if (addressPtr)
+    {
+      this.ctx.write32(addressPtr, 0x08A00000);
+    }
+
+    return SceKernelErrors.ERROR_OK;
   }
 }
